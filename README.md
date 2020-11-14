@@ -1,7 +1,9 @@
 # Credit-card-fraud-detection
 
+## Zbiór danych
 Dane Credit Card Fraud Detection (Kaggle) -- https://www.kaggle.com/mlg-ulb/creditcardfraud
 
+## Cel projektu
 Klasyfikacja (K). Konkretyzacja tego zadania wymaga:
 
 1. ustalenia atrybutu dyskretnego reprezentującego pojęcie docelowe,
@@ -13,3 +15,5 @@ Klasyfikacja (K). Konkretyzacja tego zadania wymaga:
 1. ustalenia procedur i kryteriów oceny jakości modeli (z uwzględnieniem rozkładu oraz, tam gdzie to uzasadnione, kosztów pomyłek).
 
 Wybierając zbiór danych do tego zadania należy się upewnić, że występuje w nim co najmniej jeden atrybut dyskretny, który mógłby pełnić rolę interesującego pojęcia docelowego.
+
+### Link do docsa z naszymi przemyśleniami: [ZUM ZUM](https://docs.google.com/document/d/1pXVNTq8Kli4zFLp1t7dWfQHW-vCa7gz8rbN-M0bYmv8/edit)
