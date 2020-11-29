@@ -80,8 +80,26 @@ ggplot(ccfd_dframe_over, aes(x = Class)) +
   labs(y="Percentage", x = "Class")+
   ggtitle("Percentage of classes in an oversampled dataset")
 
-ccfd_dframe_over$Class = as.numeric(ccfd_dframe_over$Class)
+ccfd_dframe_over %>% mutate(Class, as.numeric(Class) - 1) -> ccfd_dframe_over_numeric_class
 
-cor_matrix <- cor(ccfd_dframe_over)
+cor_matrix <- cor(ccfd_dframe_over_numeric_class)
 corrplot(cor_matrix, type = "lower", 
          tl.col = "black", tl.srt = 45)
+
+# Take variables which have significant correlation with Class. Use oversampled set.
+
+class_corrs <- cor_matrix["Class",][-n_columns]
+big_positive_corrs <- names(class_corrs)[class_corrs > 0.5]
+big_negative_corrs <- names(class_corrs)[class_corrs < -0.5]
+
+par(mfrow=c(2, floor((length(big_positive_corrs) + length(big_negative_corrs)/2))))
+par(mar=c(7,5,1,1))
+par(cex.lab=1.5)
+
+for (big_corrs in c(big_negative_corrs, big_positive_corrs)) {
+  boxplot(ccfd_dframe_over[ccfd_dframe_over$Class == 0,][,big_corrs], ccfd_dframe_over[ccfd_dframe_over$Class == 1,][,big_corrs],
+          names = c(0,1),
+          xlab = 'Class',
+          ylab='Value',
+          main = big_corrs)
+}
