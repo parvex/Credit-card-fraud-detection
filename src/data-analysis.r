@@ -80,7 +80,8 @@ ggplot(ccfd_dframe_over, aes(x = Class)) +
   labs(y="Percentage", x = "Class")+
   ggtitle("Percentage of classes in an oversampled dataset")
 
-ccfd_dframe_over %>% mutate(Class, as.numeric(Class) - 1) -> ccfd_dframe_over_numeric_class
+ccfd_dframe_over_numeric_class <- ccfd_dframe_over
+ccfd_dframe_over_numeric_class$Class = as.numeric(ccfd_dframe_over_numeric_class$Class) - 1
 
 cor_matrix <- cor(ccfd_dframe_over_numeric_class)
 corrplot(cor_matrix, type = "lower", 
@@ -103,3 +104,6 @@ for (big_corrs in c(big_negative_corrs, big_positive_corrs)) {
           ylab='Value',
           main = big_corrs)
 }
+
+small_corrs <- names(class_corrs)[class_corrs < 0.1 & class_corrs > -0.1]
+small_corrs
