@@ -1,6 +1,6 @@
-install.packages("skimr")
-install.packages("corrplot")
-install.packages("unbalanced")
+# install.packages("skimr")
+# install.packages("corrplot")
+# install.packages("unbalanced")
 library(skimr)
 library(dplyr)
 library(ggplot2)
@@ -16,7 +16,6 @@ head(ccfd_dframe)
 print("Summatry info of columns:")
 skim(ccfd_dframe)
 
-sprintf("This dataset contains %d rows and %d columns", dimension[1], dimension[2])
 
 nans <- sum(is.na(ccfd_dframe))
 
