@@ -3,7 +3,7 @@ library(pacman)
 options(vsc.plot = "Two")
 pacman::p_load(skimr, dplyr, ggplot2, scales, corrplot, ROSE)
 dev.off()
-def_par = par()
+def_par = par(no.readonly = TRUE)
 
 print("Reading csv")
 data_df <- read.csv("creditcard.csv")
