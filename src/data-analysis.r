@@ -16,6 +16,7 @@ head(ccfd_dframe)
 print("Summary info of columns:")
 skim(ccfd_dframe)
 
+
 nans <- sum(is.na(ccfd_dframe))
 
 if (nans > 0) {
