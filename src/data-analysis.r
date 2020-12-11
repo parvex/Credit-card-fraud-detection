@@ -1,22 +1,20 @@
-install.packages("skimr")
-install.packages("corrplot")
-install.packages("unbalanced")
+# install.packages("skimr")
+# install.packages("corrplot")
+# install.packages("ROSE")
 library(skimr)
 library(dplyr)
 library(ggplot2)
 library(scales)
 library(corrplot)
-library(unbalanced)
+library(ROSE)
 
 print("Reading csv")
 ccfd_dframe <- read.csv("creditcard.csv")
 print("Basic information about dataset:")
 print("Head:")
 head(ccfd_dframe)
-print("Summatry info of columns:")
+print("Summary info of columns:")
 skim(ccfd_dframe)
-
-sprintf("This dataset contains %d rows and %d columns", dimension[1], dimension[2])
 
 nans <- sum(is.na(ccfd_dframe))
 
@@ -48,13 +46,8 @@ ccfd_dframe <- ccfd_dframe %>% mutate_at(c("Amount", "Time"), ~(scale(.) %>% as.
 
 # Perform undersampling and plot correlation matrix
 
-n_columns<-ncol(ccfd_dframe)
-unbalanced_class<-ccfd_dframe$Class
-variables<-ccfd_dframe[ ,-n_columns]
-
-data_X_and_Y <- ubUnder(variables, unbalanced_class)
-ccfd_dframe_sub <- cbind(data_X_and_Y$X, data_X_and_Y$Y)
-names(ccfd_dframe_sub)[n_columns] <- "Class"
+ccfd_dframe_sub = ovun.sample(Class~., data=ccfd_dframe, method="under")[["data"]]
+table(ccfd_dframe_sub$Class)
 
 skim(ccfd_dframe_sub)
 
@@ -64,13 +57,18 @@ cor_matrix <- cor(ccfd_dframe_sub)
 corrplot(cor_matrix, type = "lower", 
          tl.col = "black", tl.srt = 45)
 
+
+n_columns<-ncol(ccfd_dframe)
+
 # Perform oversampling and plot correlation matrix
 # The parameters perc.over and perc.under control the amount of over-sampling of the minority class and under-sampling of the majority classes, respectively.
 # See also https://www.rdocumentation.org/packages/unbalanced/versions/2.0/topics/ubSMOTE
 
-data_X_and_Y <- ubSMOTE(variables, unbalanced_class, perc.over = 100)
-ccfd_dframe_over <- cbind(data_X_and_Y$X, data_X_and_Y$Y)
-names(ccfd_dframe_over)[n_columns] <- "Class"
+ccfd_dframe_over <- ovun.sample(Class~., data=ccfd_dframe, method="over")[["data"]]
+
+table(ccfd_dframe$Class)
+table(ccfd_dframe_over$Class)
+
 
 skim(ccfd_dframe_over)
 
@@ -105,5 +103,5 @@ for (big_corrs in c(big_negative_corrs, big_positive_corrs)) {
           main = big_corrs)
 }
 
-small_corrs <- names(class_corrs)[class_corrs < 0.1 & class_corrs > -0.1]
-small_corrs
+# small_corrs <- names(class_corrs)[class_corrs < 0.1 & class_corrs > -0.1]
+# small_corrs
