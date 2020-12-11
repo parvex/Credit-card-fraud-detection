@@ -102,7 +102,8 @@ par(mar = c(7, 5, 1, 1))
 par(cex.lab = 1.5)
 
 for (big_corrs in c(big_negative_corrs, big_positive_corrs)) {
-  boxplot(ccfd_dframe_over[ccfd_dframe_over$Class == 0, ][, big_corrs], ccfd_dframe_over[ccfd_dframe_over$Class == 1, ][, big_corrs],
+  boxplot(ccfd_dframe_over[ccfd_dframe_over$Class == 0, ][, big_corrs],
+    ccfd_dframe_over[ccfd_dframe_over$Class == 1, ][, big_corrs],
     names = c(0, 1),
     xlab = "Class",
     ylab = "Value",
