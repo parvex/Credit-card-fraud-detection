@@ -1,11 +1,132 @@
 \documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{polski}
+\usepackage[polish]{babel}
+\usepackage{titlesec}
+\usepackage{biblatex}
+\usepackage{csquotes}
+\usepackage{amsmath}
+\addbibresource{refs.bib}
+
+\titlelabel{\thetitle.\quad}
+
+
+\title{\textit{Credit Card Fraud Detection}  - \\
+\large {Zaawansowane uczenie maszynowe}}
+
+\author{Rębacz Gabriel, Belniak Michał}
 
 \begin{document}
 
+
+\maketitle
+
+\section{Szczegółowa interpretacja tematu projektu}
+Wybranym zadaniem jest analiza problemu klasyfikacji na zbiorze danych \textit{Credit Card Fraud Detection}\cite{kaggle-CCFD} dostępnym w serwisie Kaggle.com. Zbiór zawiera informacje o transakcjach kartami kredytowymi, w tym informacje o kwocie transakcji, czasie transakcji oraz 28 parametrach o nieznanym znaczeniu, które zostały poddane transformacji poprzez analizę głównych składowych.
+
+
 <<>>=
 plot(cars)
-
 @
 
+
+Zakres projektu obejmuje 4 podstawowe sfery:
+\begin{itemize}
+  \item wnikliwą analizę zbioru danych,
+  \item przetworzenie zbioru danych do postaci odpowiednich dla poszczególnych modeli,
+  \item przygotowanie, uczenie i strojenie modeli wybranych spośród dostępnych w języku R,
+  \item ocenę i porównanie modeli wraz z adekwatnymi wnioskami.
+\end{itemize}
+
+Zbiór danych należy przeanalizować pod kątem czynników które mają lub mogą mieć wpływ na sposób ich przygotowania oraz dobór parametrów modeli. Należy także określić sposób porównywania jakości modeli.
+
+\section{Opis wykorzystywanych algorytmów}
+W ramach projektu zostaną wykorzystane trzy modele przedstawione poniżej.
+
+\subsection{Drzewo klasyfikacji}
+
+Drzewo klasyfikacji \cite{wiki:decisiontree} to rodzaj drzewa decyzyjnego - narzędzia wspierającego decyzje, które wykorzystuje strukturę drzewiastą jako reprezentację. W węzłach znajdują się warunki dla wartości atrybutów, które kierują do jednego z możliwych wyników - rozgałęzień. Liście natomiast reprezentują klasę lub prawdopodobieństwo klas. Ścieżka od korzenia do liścia stanowi proces predykcji. O warunku w węźle drzewa decyduje wartość entropii wzajemnej bądź indeksu Giniego dla podziału. Wysokie wartości tych wskaźników oznaczają bardziej równomierny, a więc i korzystny, podział zbioru treningowego między węzły potomne. Zakończenie tworzenia kolejnych rozgałęzień i umieszczenie liścia zachodzi w momencie osiągnięcia kryterium stopu, zarówno wynikającego 'naturalnie' (na przykład brak próbek treningowych lub wszystkie przykłady z jednej klasy) jak i określonego przez implementującego.
+
+W naszym projekcie R wykorzystany zostanie pakiet 'tree'.
+
+
+\subsection{Regresja logistyczna}
+
+Regresja logistyczna \cite{logisticreg} jest jedną z metod regresji która głównie znajduje zastosowanie jeśli przewidywana klasa może przyjąć tylko dwie wartości. Zgodnie z nazwą, model wykorzystuje funkcję logistyczną jako funkcję określającą wartość predykcji, a klasyfikacja odbywa się dzięki ustalonej wartości progowej, po przekroczeniu której wynikową klasą jest 1, a w przeciwnym przypadku 0.
+
+\begin{equation}
+  h\Theta(x)=\sigma(Z) = \frac{1}{1 + e^{-Z}};
+\end{equation}
+
+Argumentem funkcji jest równanie liniowe wartości atrybutów próby postaci:
+
+\begin{equation}
+   Z=\sum_{i=1}^{n}w_ia_i(x)+w_{n+1}
+\end{equation}
+
+gdzie wartości $w_i,w_2 ... w_{n+1}$ są modyfikowane w procesie uczenia stanowiąc parametry modelu. W celu optymalizacji tych parametrów definiuje się funkcję kosztu.
+
+\begin{equation}
+    L=Cost(h\Theta(x), c)  = -c\log(h\Theta(x)) - (1-c) \log(1-h\Theta(x)),
+\end{equation}
+
+Funkcja kosztu jest wykorzystywana do obliczenia jej gradientu w celu zastosowania metody gradientu prostego. Przy metodzie tej parametry zmienia się według poniższej reguły:
+
+\begin{equation}
+    w_i = w_i - \alpha \frac{\delta L}{\delta w_i}
+\end{equation}
+
+Gdzie $\alpha$ stanowi parametr kroku, który może decydować o szybkości zbiegania algorytmu do wartości optymalnych lub nawet utrudniać lub uniemożliwiać jej osiągnięcie.
+
+W naszym projekcie R wykorzystana zostanie funkcja \textbf{glm} oraz inne z pakietu 'ISLR'.
+
+\subsection{Sieć neuronowa}
+% Gabriel
+
+Siecią neuronową \cite{artificialneuralnetworks} nazywany jest aproksymator w postaci modelu grafowego kierunkowego, w którym węzeł, nazywany neuronem, przetwarza wartości przekazywane poprzez wchodzące do niego krawędzie i przekazuje obliczoną wartość do krawędzi wyjściowych. Neurony podzielone są na warstwy, w których żaden neuron nie jest ze sobą połączony, natomiast każdy neuron posiada tyle krawędzi wejściowych, ile jest neuronów w warstwie poprzedzającej i tyle krawędzie wyjściowych ile jest neuronów w warstwie następnej. Krawędzie sieci posiadają wagi, które stanowią parametry w procesie uczenia. 
+
+Sposób przetwarzania wartości w neuronie polega na obliczeniu sumy iloczynów wartości na krawędzi wejściowej i odpowiadających im wag, a następnie na obliczeniu wartości funkcji aktywacji, która ustalana jest dla wszystkich neuronów w warstwie. Wyjściem ostatniej warstwy jest aproksymowana wartość przybliżanej funkcji docelowej. Algorytm uczenia sieci opiera się na obliczaniu jakości aproksymacji sieci i wykorzystaniu algorytmu wstecznej propagacji gradientu do zaktualizowania wag sieci.
+
+W naszym projekcie R wykorzystany zostanie pakiet 'neuralnet'.
+
+\section{Plan badań}
+
+\subsection{Cel poszczególnych eksperymentów}
+
+Głównym celem będzie analiza porównawcza trzech modeli przy powyższym zadaniu pod kątem jakości predykcji klas i stopnia ich dopasowania do zbioru treningowego. Poszczególne eksperymenty będą miały początkowo na celu strojenie parametrów algorytmów, tak aby porównanie modeli było jak najmniej obarczone niedostosowaniem ich parametrów. Po znalezieniu odpowiednich parametrów porównane zostaną przebiegi i wyniki procesów treningowych na danych utworzonych poprzez \textit{undersampling} oraz \textit{oversampling} dla kolejnych wartości progowych klasyfikacji.
+
+\subsection{Charakterystyka zbioru danych}
+
+Dane są w postaci tabelarycznej i nie zawierają one pustych wartości. Liczba wszystkich rekordów to 284,807, więc można wnioskować, że zbiór jest odpowiednio liczny. Wszystkie kolumny zawierają wartości numeryczne (parametry V1-V28 oraz czas, wartość transakcji i klasę). Czas i klasa są liczbami całkowitymi, a pozostałe parametry liczbami rzeczywistymi. Zbiór klas jest dwuelementowy - 1 w przypadku oszustwa, a 0 w przypadku poprawnej transakcji. Parametry V1-V28 zostały poddane transformacji poprzez analizę głównych składowych, a ich interpretacja jest nieznana ze względu na poufność danych. 
+
+Zbiór jest mocno niezbalansowany - oszustwa stanowią jedynie 0.172\% wszystkich transakcji. Konieczne jest przetworzenie zbioru w celu jego zbalansowania. Zostaną zastosowane dwie przeciwstawne metody - \textit{oversampling}, czyli zwiększenie liczby rekordów z klasą 1 oraz \textit{undersampling}, czyli wybranie tylko części rekordów z klasą 0. Obydwie metody mają na celu stworzenie zestawu danych treningowych z równą liczbą rekordów z klasą 0 oraz 1. Dodatkowo, warto przeprowadzić normalizację wartości atrybutów czasu i kwoty, szczególnie w przypadku sieci neuronowej.
+
+
+\subsection{Parametry algorytmów, których wpływ na wyniki będzie badany}
+
+\subsubsection{Drzewo klasyfikacji}
+
+W przypadku drzewa klasyfikacji głównymi parametrami wpływającymi na wynik modelu są kryterium stopu, sposób i agresywność przycinania oraz wartość progowa klasyfikacji, gdyż w naszym projekcie wartości liści będą reprezentowały prawdopodobieństwa przynależności do klasy 1, aby móc przeprowadzić analizę ROC. Dodatkowo, można zastosować różne techniki poprawiające jakość modelu, takie jak \textit{boosting}. W takim wypadku należało będzie również określić parametry owych algorytmów.
+
+\subsubsection{Regresja logistyczna}
+
+Wzięty pod uwagę będzie Współczynnik szybkości uczenia, który występuje we wzorze na aktualizację parametrów $w_i$ jako $\alpha$.
+
+\subsubsection{Gęsta sieć neuronowa}
+
+Przede wszystkim, właściwości modelu można modyfikować poprzez zmianę rodzaju i liczby warstw ukrytych oraz liczby neuronów w każdej z warstw. Ponadto, wpływ na działanie modelu ma dobór algorytmu optymalizującego średni błąd modelu wraz z jego parametrami, rozmiar pakietu (\textit{batcha}) oraz liczba epok. W naszym zadaniu chcielibyśmy przyjąć stałą liczbę warstw ukrytych, to jest 1, lecz może się okazać, że potrzebna będzie nieco głębsza sieć i w takim przypadku zwiększymy liczbę warstw ukrytych do 2. 
+
+Użytym algorytmem optymalizacji będzie stochastyczny najszybszy spadek (\textit{Stochastic Gradient Descent}), w którym jedynym parametrem jest współczynnik szybkości uczenia. Jeśli jednak model będzie wykazywał tendencję do bardzo powolnego spadku wartości funkcji straty zastosujemy algorytm ADAM, który pozwala na określenie trzech parametrów - współczynnik szybkości uczenia oraz $\beta_1$ i $\beta_2$, które jednak z zasady przyjmują niezmienne wartości odpowiednio 0.9 oraz 0.999. Sprawdzanymi funkcjami aktywacji w warstwie ukrytej będą funkcja logistyczna oraz \textit{rectifier} (neurony typu ReLU). Wagi będą inicjalizowane metodą Xavier\cite{xavier}. Rozmiar pakietu oraz liczba epok zostaną określone empirycznie.
+
+\subsection{Miary jakości i procedury oceny modeli}
+
+Głównym sposobem oceny jakości będzie porównanie analiz ROC do zadania wykrywania oszustwa dla poszczególnych modeli, jako jeden z najpopularniejszych sposobów oceny jakości predykcji binarnej. Uwzględnione zostaną także miary jakości: precyzja, odzysk oraz współczynnik F. 
+
+\section{Otwarte kwestie}
+Do przeanalizowania pozostaje kwestia prawdopodobnego odrzucenia części atrybutów ze zbioru danych. Po zebraniu informacji o zbiorze okazuje się, że część atrybutów jest bardzo słabo skorelowana z wynikową klasą. Ponadto, wymiarowość dziedziny jest bardzo duża, co będzie z pewnością utrudniać osiągnięcie dobrych jakości predykcji, liczymy więc, że uzasadnionym będzie odrzucenie nawet połowy atrybutów.
+Ponadto, zasadne może okazać się modyfikowanie wybranych algorytmów, jeśli wyniki nie będą satysfakcjonujące i widoczne będzie pole do poprawy.
+
+% \bibliographystyle{unsrt}
+\printbibliography
 
 \end{document}
