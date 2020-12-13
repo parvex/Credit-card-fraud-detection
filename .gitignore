@@ -331,3 +331,5 @@ TSWLatexianTemp*
 
 src/article/*.tex
 src/article/figure
+src/notebook.nb.html
+src/notebook.html

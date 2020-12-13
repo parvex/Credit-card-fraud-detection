@@ -5,6 +5,7 @@ date: "12/12/2020"
 output:
   html_document:
     df_print: paged
+    code_folding: hide
 ---
 
 # Interpretacja tematu projektu
@@ -20,7 +21,7 @@ Zakres projektu obejmuje 4 podstawowe sfery:
 
 # Analiza danych
 
-```{r}
+```{r init, echo=F}
 Sys.setlocale(category = "LC_ALL", locale = "Polish")
 library(pacman)
 pacman::p_load(skimr, dplyr, ggplot2, scales, corrplot, ROSE, papeR)
@@ -36,12 +37,12 @@ Zbiór danych należy przeanalizować pod kątem czynników które mają lub mog
 
 
 Pierwsze 6 rekordków zbioru danych:
-```{r}
+```{r head}
 head(data_df)
 ```
 
 
-```{r}
+```{r nulls-check}
 nans <- sum(is.na(data_df))
 
 if (nans > 0) {
@@ -55,25 +56,25 @@ if (nans > 0) {
 
 Podstawowa analiza statystyczna zbioru danych:
 
-```{r}
+```{r summarize}
 summarize(data_df)
 ```
 
 
-```{r}
+```{r rozklad-klas}
 ggplot(data_df, aes(x = Class)) +
   geom_bar(aes(y = (..count..) / sum(..count..))) +
   scale_y_continuous(labels = percent) +
   labs(y = "%", x = "Klasa") +
   ggtitle("Procentowy rozkład klas")
 ```
-```{r}
-# summarize(data_df, type = "factor", variables = "Class", cumulative = TRUE, digits = 4)
+```{r rozklad-klas-tabela}
+summarize(data_df, type = "factor", variables = "Class", cumulative = TRUE, digits = 4)
 ```
 
 Jak widać z danych odnośnie kolumny class - zbiór danych jest niezrównoważony.
 
-```{r}
+```{r histogram-wartosci-transakcji}
 hist(data_df$Amount,
   breaks = 500,
   xlim = c(0, max(data_df$Amount)),
@@ -83,7 +84,7 @@ hist(data_df$Amount,
 )
 ```
 
-```{r}
+```{r wartosc-transakcji-boxlpot}
 boxplot(data_df$Amount,
         main="Wykres pudełkowy wartości transakcji",
         ylab="Wartość transakcji"
