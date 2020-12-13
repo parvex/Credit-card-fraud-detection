@@ -90,8 +90,6 @@ for (big_corrs in c(big_negative_corrs, big_positive_corrs)) {
 par(def_par)
 
 # Perform oversampling and plot correlation matrix
-# The parameters perc.over and perc.under control the amount of over-sampling of the minority class and under-sampling of the majority classes, respectively.
-# See also https://www.rdocumentation.org/packages/unbalanced/versions/2.0/topics/ubSMOTE
 
 oversampled_df <- ovun.sample(Class ~ ., data = data_df, method = "over")[["data"]]
 

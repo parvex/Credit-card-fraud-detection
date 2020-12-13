@@ -21,7 +21,7 @@ Zakres projektu obejmuje 4 podstawowe sfery:
 
 # Analiza danych
 
-```{r init, echo=F}
+```{r init}
 Sys.setlocale(category = "LC_ALL", locale = "Polish")
 library(pacman)
 pacman::p_load(skimr, dplyr, ggplot2, scales, corrplot, ROSE, papeR)
@@ -29,7 +29,9 @@ def_par = par(no.readonly = TRUE)
 #data loading
 data_df <- read.csv("creditcard.csv")
 
-
+data_df$Class <- as.factor(data_df$Class) 
+n_columns <- ncol(data_df)
+# data_df$ClassNumeric <- as.numeric(data_df$Class) - 1
 ```
 
 
@@ -93,7 +95,130 @@ boxplot(data_df$Amount,
 
 Wartości transakcji są skupione w większości na najniższych wartościach mimo że występują również ekstremalne wartości.
 
-# Przetwarzanie danych
+```{r correlation-matrix-unbalanced}
+#correlation matrix for unbalanced set
+data_df$Class <- as.numeric(data_df$Class) - 1
+cor_matrix <- cor(data_df)
+corrplot(cor_matrix,
+         type = "lower",
+         tl.col = "black", tl.srt = 45,
+         main = "Macierz korelacji dla niezbalansowanego zbioru",
+         mar=c(0,0,1,0)
+)
+```
+
+Jak widać z macierzy korelacji dla niezbalansowanego zbioru nie wynika wiele. Przyczyną tego są zaburzenia wynikające właśnie z jego niezbalansowania. Należy sprawdzić czy zbalansowanie poprawi odczyt korelacji.
+
+## Przetwarzanie danych
+
+W celu dalszej analizy zbioru zastosowane zostaną przekształcenia:
+
+* kolumny Time i Amount zostaną poddane skalowaniu,
+* zbiór zostanie podzielony na dwa zbalansowane zbiory:
+  + z wykorzystaniem techniki undersampling;
+  + z wykorzystaniem techniki oversampling.
+
+Undersampling losowo dobiera wartości z klasą dominującą. Oversampling zaś generuje nowe wartości klasy o mniejszej ilości wartości na podstawie istniejących wartości.
+
+```{r scale}
+data_df <- data_df %>% mutate_at(c("Amount", "Time"), ~ (scale(.) %>% as.vector()))
+```
+
+## Undersampling
+
+Zbiór poddany zostanie undersamplingowi dzięki czemu powstanie zbalansowany zbiór złożony z istniejących wartości klasy stanowiącej mniejszość oraz losowo wybranych wartościach o klasie większościowej.
+```{r undersampling-cor-matrix}
+# Perform undersampling and plot correlation matrix
+
+undersampled_df <- ovun.sample(Class ~ ., data = data_df, method = "under")[["data"]]
+
+skim(undersampled_df)
+
+
+cor_matrix <- cor(undersampled_df)
+corrplot(cor_matrix,
+  type = "lower",
+  tl.col = "black", tl.srt = 45,
+  main = "Correlation matrix for undersampled set",
+  mar = c(0,0,1,0)
+)
+```
+
+Z macierzy korelacji można lepiej wywnioskować korelacje między klasą a pozostałymi kolumnami.
+
+
+Poniżej przedstawione są wykresy pudełkowe dla atrybutów o największych korelacjach w zbiorze poddanym undersamplingowi.
+
+```{r undersampling-cor-boxplot}
+# Take variables which have significant correlation with Class. Use oversampled set.
+
+class_corrs <- cor_matrix["Class", ][-n_columns]
+big_positive_corrs <- names(class_corrs)[class_corrs > 0.5]
+big_negative_corrs <- names(class_corrs)[class_corrs < -0.5]
+
+par(mfrow = c(2, floor((length(big_positive_corrs) + length(big_negative_corrs) / 2))))
+par(mar = c(7, 5, 1, 1))
+par(cex.lab = 1.5)
+
+for (big_corrs in c(big_negative_corrs, big_positive_corrs)) {
+  boxplot(undersampled_df[undersampled_df$Class == 0, ][, big_corrs],
+    undersampled_df[undersampled_df$Class == 1, ][, big_corrs],
+    names = c(0, 1),
+    xlab = "Class",
+    ylab = "Value",
+    main = big_corrs
+  )
+}
+
+par(def_par)
+```
+
+## Oversampling 
+
+Zbiór poddany zostanie oversampingowi dzięki czemu powstanie zbalansowany zbiór złożony z istniejących wartości klasy mniejszościowej, nowo wygenerowanych wartości klasy mniejszościowej oraz losowo wybranych wartościach o klasie większościowej.
+
+```{r oversampling-cor-matrix}
+# Perform oversampling and plot correlation matrix
+
+oversampled_df <- ovun.sample(Class ~ ., data = data_df, method = "over")[["data"]]
+
+skim(oversampled_df)
+
+
+cor_matrix <- cor(oversampled_df)
+corrplot(cor_matrix,
+  type = "lower",
+  tl.col = "black", tl.srt = 45,
+  main = "Correlation matrix for oversampled set",
+  mar=c(0,0,1,0)
+  
+)
+```
+
+Poniżej przedstawione są wykresy pudełkowe dla atrybutów o największych korelacjach w zbiorze poddanym oversamplingowi.
+
+```{r oversampling-cor-boxplot}
+# Take variables which have significant correlation with Class. Use oversampled set.
+
+class_corrs <- cor_matrix["Class", ][-n_columns]
+big_positive_corrs <- names(class_corrs)[class_corrs > 0.5]
+big_negative_corrs <- names(class_corrs)[class_corrs < -0.5]
+
+par(mfrow = c(2, floor((length(big_positive_corrs) + length(big_negative_corrs) / 2))))
+par(mar = c(7, 5, 1, 1))
+par(cex.lab = 1.5)
+
+for (big_corrs in c(big_negative_corrs, big_positive_corrs)) {
+  boxplot(oversampled_df[oversampled_df$Class == 0, ][, big_corrs],
+    oversampled_df[oversampled_df$Class == 1, ][, big_corrs],
+    names = c(0, 1),
+    xlab = "Class",
+    ylab = "Value",
+    main = big_corrs
+  )
+}
+par(def_par)
+```
 
 # Przygotowanie, uczenie i strojenie wybranych modeli
 
