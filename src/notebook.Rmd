@@ -225,29 +225,83 @@ Głównym kryterium oceny będzie pole pod krzywą ROC. Do tworzenia modeli, ucz
 ```{r}
 folds <- vfold_cv(data_df, strata = Class)
 
+log_reg_tune_spec <-
+  logistic_reg(
+    penalty = tune(),
+    mixture = tune()
+  ) %>%
+  set_engine("glm") %>%
+  set_mode("classification")
+
 tree_tune_spec <- 
   decision_tree(
     cost_complexity = tune(),
-    tree_depth = tune()
+    tree_depth = tune(),
+    min_n = tune()
   ) %>% 
   set_engine("rpart") %>% 
   set_mode("classification")
 
 
-tree_grid <- grid_regular(cost_complexity(),
-                          tree_depth(),
-                          levels = 5)
+
+tune_models <- list(log_reg_tune_spec, tree_tune_spec)
+recipes <- list(undersample_recipe, oversample_recipe)
+
+workflows <- list()
+
+i <- 1
+for (recipe in recipes) {
+  for (model in tune_models) {
+      workflows[[i]] <- workflow() %>%
+               add_model(model) %>%
+               add_recipe(recipe)
+      
+      i <- i + 1
+  }
+}
 
 tree_workflow <- workflow() %>%
   add_model(tree_tune_spec) %>%
   add_recipe(undersample_recipe)
 
-tree_res <- 
-  tree_workflow %>% 
-  tune_grid(
+
+
+HP_set <- parameters(workflow)
+
+search_res <-
+  workflow %>% 
+  tune_bayes(
     resamples = folds,
-    grid = tree_grid
-    )
+    # To use non-default parameter ranges
+    param_info = HP_set,
+    # Generate five at semi-random to start
+    initial = 5,
+    iter = 50,
+    # How to measure performance?
+    metrics = metric_set(roc_auc),
+    control = control_bayes(no_improve = 30, verbose = TRUE)
+  )
+
+for (workflow in workflows) {
+HP_set <- parameters(workflow)
+
+search_res <-
+  workflow %>% 
+  tune_bayes(
+    resamples = folds,
+    # To use non-default parameter ranges
+    param_info = HP_set,
+    # Generate five at semi-random to start
+    initial = 5,
+    iter = 50,
+    # How to measure performance?
+    metrics = metric_set(roc_auc),
+    control = control_bayes(no_improve = 30, verbose = TRUE)
+  )
+  
+    
+}
+
 
 # cos jest nie tak bo chyba za dlugo sie przeszukuje, moze undersampling nie dziala na faldach
 
