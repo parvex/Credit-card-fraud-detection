@@ -24,7 +24,20 @@ Zakres projektu obejmuje 4 podstawowe sfery:
 ```{r init}
 Sys.setlocale(category = "LC_ALL", locale = "Polish")
 library(pacman)
-pacman::p_load(skimr, dplyr, ggplot2, scales, corrplot, tidymodels, tune, workflows, tictoc, themis, reshape2)
+pacman::p_load(skimr, 
+               dplyr, 
+               ggplot2, 
+               scales, 
+               corrplot, 
+               tidymodels, 
+               tune, 
+               workflows, 
+               tictoc, 
+               themis, 
+               reshape2, 
+               glmnet, 
+               tensorflow, 
+               keras)
 def_par = par(no.readonly = TRUE)
 #data loading
 data_df <- read.csv("creditcard.csv")
@@ -230,7 +243,7 @@ log_reg_tune_spec <-
     penalty = tune(),
     mixture = tune()
   ) %>%
-  set_engine("glm") %>%
+  set_engine("glmnet") %>%
   set_mode("classification")
 
 tree_tune_spec <- 
@@ -242,9 +255,16 @@ tree_tune_spec <-
   set_engine("rpart") %>% 
   set_mode("classification")
 
+neural_network_spec <-
+  mlp(epochs = 20, 
+      hidden_units = tune(), 
+      dropout = tune() ) %>%
+  set_mode("classification") %>% 
+  # Also set engine-specific `verbose` argument to prevent logging the results: 
+  set_engine("keras", verbose = 0)
 
 
-tune_models <- list(log_reg_tune_spec, tree_tune_spec)
+tune_models <- list(log_reg_tune_spec, tree_tune_spec, neural_network_spec)
 recipes <- list(undersample_recipe, oversample_recipe)
 
 workflows <- list()
@@ -260,32 +280,15 @@ for (recipe in recipes) {
   }
 }
 
-tree_workflow <- workflow() %>%
-  add_model(tree_tune_spec) %>%
-  add_recipe(undersample_recipe)
 
+results <- list()
+i <- 1
 
-
-HP_set <- parameters(workflow)
-
-search_res <-
-  workflow %>% 
-  tune_bayes(
-    resamples = folds,
-    # To use non-default parameter ranges
-    param_info = HP_set,
-    # Generate five at semi-random to start
-    initial = 5,
-    iter = 50,
-    # How to measure performance?
-    metrics = metric_set(roc_auc),
-    control = control_bayes(no_improve = 30, verbose = TRUE)
-  )
-
+tic()
 for (workflow in workflows) {
 HP_set <- parameters(workflow)
 
-search_res <-
+results[[i]] <-
   workflow %>% 
   tune_bayes(
     resamples = folds,
@@ -293,15 +296,15 @@ search_res <-
     param_info = HP_set,
     # Generate five at semi-random to start
     initial = 5,
-    iter = 50,
+    iter = 10,
     # How to measure performance?
     metrics = metric_set(roc_auc),
     control = control_bayes(no_improve = 30, verbose = TRUE)
   )
-  
+  i <- i+1
     
 }
-
+toc()
 
 # cos jest nie tak bo chyba za dlugo sie przeszukuje, moze undersampling nie dziala na faldach
 
