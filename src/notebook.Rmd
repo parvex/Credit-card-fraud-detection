@@ -236,7 +236,11 @@ W rozdziale tym przeprowadzone zostanie definiowanie modeli, uczenie oraz ich st
 Głównym kryterium oceny będzie pole pod krzywą ROC. Do tworzenia modeli, uczenua oraz ich strojenia wykorzystana zostanie biblioteka tidymodels.
 
 ```{r}
-folds <- vfold_cv(data_df, strata = Class)
+
+data_split <- initial_split(data_df, strata = Class)
+data_train <- training(cell_split)
+data_test  <- testing(cell_split)
+folds <- vfold_cv(data_train, strata = Class)
 
 log_reg_tune_spec <-
   logistic_reg(
