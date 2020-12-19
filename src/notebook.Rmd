@@ -238,8 +238,8 @@ Głównym kryterium oceny będzie pole pod krzywą ROC. Do tworzenia modeli, ucz
 ```{r}
 
 data_split <- initial_split(data_df, strata = Class)
-data_train <- training(cell_split)
-data_test  <- testing(cell_split)
+data_train <- training(data_split)
+data_test  <- testing(data_split)
 folds <- vfold_cv(data_train, strata = Class)
 
 log_reg_tune_spec <-
