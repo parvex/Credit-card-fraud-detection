@@ -4,6 +4,7 @@
 
 # Session Data files
 .RData
+.RDataTmp
 
 # User-specific files
 .Ruserdata
@@ -331,6 +332,7 @@ TSWLatexianTemp*
 
 src/article/*.tex
 src/article/figure
+src/notebook_files
 src/notebook.nb.html
 src/notebook.html
 src/notebook.html
