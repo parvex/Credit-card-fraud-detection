@@ -77,11 +77,21 @@ skim(data_df)
 
 
 ```{r rozklad-klas}
-ggplot(data_df, aes(x = Class)) +
+common_theme <- theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+ggplot(data_df, aes(x = Class, y = prop.table(stat(count)), fill = factor(Class),
+                          label = scales::percent(prop.table(stat(count))))) +
   geom_bar(aes(y = (..count..) / sum(..count..))) +
-  scale_y_continuous(labels = percent) +
   labs(y = "%", x = "Klasa") +
-  ggtitle("Procentowy rozkład klas")
+  geom_text(stat = 'count',
+              position = position_dodge(.9), 
+              vjust = -0.5, 
+              size = 3) +
+  scale_x_discrete(labels = c("0", "1"))+
+  scale_y_continuous(labels = scales::percent)+
+  ggtitle("Procentowy rozkład klas") + 
+  common_theme + 
+  labs(fill = "Klasa")
 ```
 ```{r rozklad-klas-tabela}
 summarize(data_df, type = "factor", variables = "Class", cumulative = TRUE, digits = 4)
@@ -95,7 +105,7 @@ Skalowanie kolumn Time oraz Amount.
 data_df <- data_df %>% mutate_at(c("Amount", "Time"), ~ (scale(.) %>% as.vector()))
 ```
 
-Wartości transakcji są skupione w większości na najniższych wartościach mimo że występują również ekstremalne wartości.
+Wartości transakcji są skupione w większości na najniższych wartościach, jednakże występują również ekstremalne wartości.
 
 ```{r correlation-matrix-unbalanced}
 #correlation matrix for unbalanced set
@@ -103,39 +113,39 @@ cor_matrix <- corMatrix(data_df, "Macierz korelacji dla niezbalansowanego zbioru
 cor_matrix
 ```
 
-Jak widać z macierzy korelacji dla niezbalansowanego zbioru nie wynika wiele. Przyczyną tego są zaburzenia wynikające właśnie z jego niezbalansowania. Należy sprawdzić czy zbalansowanie poprawi odczyt korelacji.
+Jak widać, z macierzy korelacji dla niezbalansowanego zbioru nie wynika wiele. Przyczyną tego są zaburzenia wynikające właśnie z jego niezbalansowania. Należy sprawdzić czy zbalansowanie poprawi odczyt korelacji.
 
 ## Przetwarzanie danych
 
-W celu dalszej analizy zbioru zastosowane zostaną przekształcenia:
+W celu dalszej analizy zbioru zastosowano przekształcenia:
 
-* zbiór zostanie podzielony na dwa zbalansowane zbiory:
+* zbiór został podzielony na dwa zbalansowane zbiory:
   + z wykorzystaniem techniki undersampling;
   + z wykorzystaniem techniki oversampling.
 
-Undersampling losowo dobiera wartości z klasą dominującą. Oversampling zaś generuje nowe wartości klasy o mniejszej ilości wartości na podstawie istniejących wartości.
+Undersampling losowo dobiera wartości z klasą dominującą. Oversampling zaś generuje nowe wartości klasy o mniejszej liczności na podstawie istniejących wartości.
 
 ## Undersampling
 
-Zbiór poddany zostanie undersamplingowi dzięki czemu powstanie zbalansowany zbiór złożony z istniejących wartości klasy stanowiącej mniejszość oraz losowo wybranych wartościach o klasie większościowej.
+Zbiór poddany został przekształceniu undersampling dzięki czemu powstał zbalansowany zbiór złożony z istniejących wartości klasy stanowiącej mniejszość oraz losowo wybranych rekordów o klasie większościowej.
 ```{r undersampling-cor-matrix}
 # Perform undersampling and plot correlation matrix
 
 undersample_recipe <- recipe(Class~., data = data_df) %>%
-  themis::step_downsample(Class) %>%
-  prep()
+  themis::step_downsample(Class)
 
-undersampled_df <- bake(undersample_recipe, new_data=NULL)
+undersampled_df <-undersample_recipe %>% prep(training = data_df) %>% bake(new_data=NULL)
 
 table(undersampled_df$Class)
+
+skim(undersampled_df)
 
 cor_matrix <- corMatrix(undersampled_df, "Macierz korelacji dla zbioru poddanemu \"undersampling\".")
 ```
 
-Z macierzy korelacji dla danych zbalansowanych wynikaja korelacje między klasą a pozostałymi kolumnami.
+Z macierzy korelacji dla danych zbalansowanych wynikają korelacje między klasą a pozostałymi kolumnami.
 
-
-Poniżej przedstawione są wykresy pudełkowe dla atrybutów o największych korelacjach w zbiorze poddanym undersamplingowi.
+Poniżej przedstawione są wykresy pudełkowe dla atrybutów o największych korelacjach w zbiorze poddanym przekształceniu undersampling.
 
 ```{r undersampling-cor-boxplot}
 # Take variables which have significant correlation with Class. Use oversampled set.
@@ -144,16 +154,15 @@ bigCorrsBoxPlot(undersampled_df, cor_matrix)
 
 ## Oversampling 
 
-Zbiór poddany zostanie oversampingowi dzięki czemu powstanie zbalansowany zbiór złożony z istniejących wartości klasy mniejszościowej, nowo wygenerowanych wartości klasy mniejszościowej oraz losowo wybranych wartościach o klasie większościowej.
+Zbiór poddany został przekształceniu oversamping, dzięki czemu powstał zbalansowany zbiór złożony z istniejących rekordów klasy mniejszościowej, nowo wygenerowanych rekordów klasy mniejszościowej oraz losowo wybranych rekordów o klasie większościowej.
 
 ```{r oversampling-cor-matrix}
 # Perform oversampling and plot correlation matrix
 
 oversample_recipe <- recipe(Class~., data = data_df) %>%
-  themis::step_smote(Class) %>%
-  prep()
+  themis::step_smote(Class)
 
-oversampled_df <- bake(oversample_recipe, new_data=NULL)
+oversampled_df <- oversample_recipe %>% prep(training = data_df) %>% bake(new_data=NULL)
 
 table(oversampled_df$Class)
 
@@ -171,117 +180,89 @@ bigCorrsBoxPlot(oversampled_df, cor_matrix)
 
 ### Wybór atrybutów
 
-W tym podrozdziale przeprowadzimy selekcję atrybutów za pomocą automatycznej metody wybierajacej 10 atrybutów o najwiekszej wartosci "variable importance" z lasu losowego. 
-
+W tym podrozdziale przeprowadzono selekcję atrybutów za pomocą automatycznej metody wybierajacej 10 atrybutów o najwiekszej wartosci "variable importance" z lasu losowego. 
+Wykorzystano las losowy z pakietu "ranger" złożony z 50 drzew.
 ```{r feature selection}
 # ensure the results are repeatable
 set.seed(7)
 trControl = trainControl(method="cv", number = 5, allowParallel = TRUE, verbose = TRUE)
 rf_fit <- train(Class ~ ., data = data_df, method = "ranger", num.trees = 50, trControl = trControl, importance = 'impurity')
-imp <- varImp(rf_fit)
-plot(features_imp, top = 20)
+imp <- varImp(rf_fit, scale = FALSE)
+plot(imp)
 imp <- data.frame(imp[1])
 features <- rownames(imp)[order(imp$Overall, decreasing=TRUE)][1:10]
 ```
 Wybrane atrybuty: ${features}
 
-```{r feature selection continuation}
+Ponownie przeprowadzono przekształcenia undersampling oraz oversampling, tym razem na danych z wyłącznie wybranymi atrybutami.
+```{r feature selection continuation - undersample dataset with selected attributes}
 data_df_selected <- data_df[,which(names(data_df) %in% c(features, "Class"))]
-data_df_selected$Class <- as.numeric(data_df_selected$Class) - 1
-cor_matrix <- corMatrix(data_df_selected, "Macierz korelacji dla zbioru poddanemu selekcji atrybutów.")
+selected_undersample_recipe <- recipe(Class~., data = data_df_selected) %>%
+  themis::step_downsample(Class) %>%
+  prep()
 
+selected_undersampled_df <- bake(selected_undersample_recipe, new_data=NULL)
+
+cor_matrix <- corMatrix(selected_undersampled_df, "Macierz korelacji dla zbioru poddanemu selekcji atrybutów oraz \"undersampling\".")
 ```
+```{r feature selection continuation - undersample dataset with selected attributes}
+
+selected_oversample_recipe <- recipe(Class~., data = data_df_selected) %>%
+  themis::step_smote(Class) %>%
+  prep()
+
+selected_oversampled_df <- bake(selected_oversample_recipe, new_data=NULL)
+cor_matrix <- corMatrix(selected_oversampled_df, "Macierz korelacji dla zbioru poddanemu selekcji atrybutów oraz \"oversampling\".")
+```
+
+Z macierzy korelacji wynikają silne korelacje między wybranymi atrybutami oraz pojęciem docelowym.
 
 # Przygotowanie, uczenie i strojenie wybranych modeli
 
-W rozdziale tym przeprowadzone zostanie definiowanie modeli, uczenie oraz ich strojenie. Do tworzenia modeli wykorzystano bibliotekę tidymodels. Zbiór danych zostanie podzielony na dwa zbiory: trenujący oraz testujący. Strojenie parametrów odbędzie się na zbiorze trenującym z wykorzystaniem na nim 10-krotnej walidacji krzyżowej. Modele o najlepszych parametrach zostaną ostatecznie wyuczone na całym zbiorze trenującym i ocenione na zbiorze trenującym. 
+W rozdziale tym przeprowadzono definiowanie modeli, uczenie oraz ich strojenie. Zbiór danych podzielono na dwa zbiory: trenujący oraz testujący. 
+W ramach porównania eksperymenty zostały przeprowadzone na pełnym zbiorze oraz na zbiorze zawierajacym wylacznie 10 wybranych atrybutow.
+Strojenie parametrów odbyło się na zbiorze trenującym z wykorzystaniem na nim 10-krotnej walidacji krzyżowej.
+Modele o najlepszych parametrach zostały ostatecznie wyuczone na całym zbiorze trenującym i ocenione na zbiorze testującym. 
 
-Głównym kryterium oceny będzie pole pod krzywą ROC. Do tworzenia modeli, uczenua oraz ich strojenia wykorzystana zostanie biblioteka tidymodels.
+Głównym kryterium oceny jakości modeli jest pole pod krzywą ROC. Do tworzenia modeli, uczenia oraz ich strojenia wykorzystana została biblioteka tidymodels.
 
-```{r}
+```{r training and testing on dataset with all features}
+log_reg_tune_spec <- create_log_tune_spec()
+tree_tune_spec <- create_tree_tune_spec()
+neural_net_spec <- create_neural_net_spec(epochs = 20)
 
 data_split <- initial_split(data_df, strata = Class)
 data_train <- training(data_split)
-data_test  <- testing(data_split)
-folds <- vfold_cv(data_train, strata = Class)
+data_test <- testing(data_split)
 
-log_reg_tune_spec <-
-  logistic_reg(
-    penalty = tune(),
-    mixture = tune()
-  ) %>%
-  set_engine("glmnet") %>%
-  set_mode("classification")
+head(data_test)
+source("data-analysis.r")
 
-tree_tune_spec <- 
-  decision_tree(
-    cost_complexity = tune(),
-    tree_depth = tune(),
-    min_n = tune()
-  ) %>% 
-  set_engine("rpart") %>% 
-  set_mode("classification")
+#log_reg_workflows <- tune_with_data(log_reg_tune_spec, data_train, list(undersample_recipe))
+tree_workflows <- tune_with_data(tree_tune_spec, data_train, list(undersample_recipe))
+log_reg_workflows <- list()
+neural_net_workflows <- list()
 
-neural_network_spec <-
-  mlp(epochs = 20, 
-      hidden_units = tune(), 
-      dropout = tune() ) %>%
-  set_mode("classification") %>% 
-  # Also set engine-specific `verbose` argument to prevent logging the results: 
-  set_engine("keras", verbose = 1)
-
-
-tune_models <- list(log_reg_tune_spec, tree_tune_spec, neural_network_spec)
-recipes <- list(undersample_recipe, oversample_recipe)
-
-workflows <- list()
-
-i <- 1
-for (recipe in recipes) {
-  for (model in tune_models) {
-      workflows[[i]] <- workflow() %>%
-               add_model(model) %>%
-               add_recipe(recipe)
-      
-      i <- i + 1
-  }
+for (recipe in list(undersample_recipe, oversample_recipe)) {
+  neural_net_workflows <- append(neural_net_workflows, list(workflow() %>% add_model(neural_net_spec) %>% add_recipe(recipe)))
+  log_reg_workflows <- append(log_reg_workflows, list(workflow() %>% add_model(log_reg_tune_spec) %>% add_recipe(recipe)))
 }
 
+fit_and_eval(log_reg_workflows[[1]], data_split)
+fit_and_eval(log_reg_workflows[[2]], data_split)
 
-results <- list()
-i <- 1
+fit_and_eval(tree_workflows[[1]], data_split)
+#fit_and_eval(tree_workflows[[2]], data_split)
 
-tic()
-for (workflow in workflows) {
-  HP_set <- parameters(workflow)
+fit_and_eval(neural_net_workflows[[1]], data_split)
+fit_and_eval(neural_net_workflows[[2]], data_split)
 
-  results[[i]] <-
-    workflow %>% 
-  workflow %>% 
-    workflow %>% 
-    tune_bayes(
-      resamples = folds,
-      # To use non-default parameter ranges
-      param_info = HP_set,
-      # Generate five at semi-random to start
-      initial = 5,
-      iter = 10,
-      # How to measure performance?
-      metrics = metric_set(roc_auc),
-      control = control_bayes(no_improve = 30, verbose = TRUE)
-    )
-    i <- i+1
-    
-}
-toc()
-
-# cos jest nie tak bo chyba za dlugo sie przeszukuje, moze undersampling nie dziala na faldach
 ```
 Znalezione najlepsze hiperparametry dla drzewa przedstawione są poniżej.
 
 
 
-## Drzewo klasyfikacji
+## Drzewo klasyfikacji    
 
 ## Regresja liniowa
 
