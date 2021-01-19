@@ -149,7 +149,15 @@ Poniżej przedstawione są wykresy pudełkowe dla atrybutów o największych kor
 
 ```{r undersampling-cor-boxplot}
 # Take variables which have significant correlation with Class. Use oversampled set.
-bigCorrsBoxPlot(undersampled_df, cor_matrix)
+class_corrs <- cor_matrix["Class", ][-ncol(undersampled_df)]
+big_corrs <- names(class_corrs)[abs(class_corrs) > 0.5]
+
+melted <- undersampled_df %>% select(big_corrs, Class) %>% melt(id.var = "Class")
+ggplot(melted, aes(x=variable, y=value)) + 
+  geom_boxplot(aes(fill=Class)) + 
+  facet_wrap( ~ variable, scales="free")
+
+undersampled_df$Class <- as.factor(undersampled_df$Class)
 ```
 
 ## Oversampling 
@@ -175,7 +183,15 @@ Poniżej przedstawione są wykresy pudełkowe dla atrybutów o największych kor
 
 ```{r oversampling-cor-boxplot}
 # Take variables which have significant correlation with Class. Use oversampled set.
-bigCorrsBoxPlot(oversampled_df, cor_matrix)
+class_corrs <- cor_matrix["Class", ][-ncol(oversampled_df)]
+big_corrs <- names(class_corrs)[abs(class_corrs) > 0.5]
+
+melted <- oversampled_df %>% select(big_corrs, Class) %>% melt(id.var = "Class")
+ggplot(melted, aes(x=variable, y=value)) + 
+  geom_boxplot(aes(fill=Class)) + 
+  facet_wrap( ~ variable, scales="free")
+
+oversampled_df$Class <- as.factor(oversampled_df$Class)
 ```
 
 ### Wybór atrybutów
@@ -197,6 +213,7 @@ Wybrane atrybuty: ${features}
 Ponownie przeprowadzono przekształcenia undersampling oraz oversampling, tym razem na danych z wyłącznie wybranymi atrybutami.
 ```{r feature selection continuation - undersample dataset with selected attributes}
 data_df_selected <- data_df[,which(names(data_df) %in% c(features, "Class"))]
+
 selected_undersample_recipe <- recipe(Class~., data = data_df_selected) %>%
   themis::step_downsample(Class) %>%
   prep()
@@ -205,6 +222,7 @@ selected_undersampled_df <- bake(selected_undersample_recipe, new_data=NULL)
 
 cor_matrix <- corMatrix(selected_undersampled_df, "Macierz korelacji dla zbioru poddanemu selekcji atrybutów oraz \"undersampling\".")
 ```
+
 ```{r feature selection continuation - undersample dataset with selected attributes}
 
 selected_oversample_recipe <- recipe(Class~., data = data_df_selected) %>%
@@ -220,48 +238,89 @@ Z macierzy korelacji wynikają silne korelacje między wybranymi atrybutami oraz
 # Przygotowanie, uczenie i strojenie wybranych modeli
 
 W rozdziale tym przeprowadzono definiowanie modeli, uczenie oraz ich strojenie. Zbiór danych podzielono na dwa zbiory: trenujący oraz testujący. 
+Najpierw przeprowadzono eksperymenty z zastosowaniem techniki undersample, a pózniej techniki oversample. 
 W ramach porównania eksperymenty zostały przeprowadzone na pełnym zbiorze oraz na zbiorze zawierajacym wylacznie 10 wybranych atrybutow.
 Strojenie parametrów odbyło się na zbiorze trenującym z wykorzystaniem na nim 10-krotnej walidacji krzyżowej.
 Modele o najlepszych parametrach zostały ostatecznie wyuczone na całym zbiorze trenującym i ocenione na zbiorze testującym. 
 
 Głównym kryterium oceny jakości modeli jest pole pod krzywą ROC. Do tworzenia modeli, uczenia oraz ich strojenia wykorzystana została biblioteka tidymodels.
 
-```{r training and testing on dataset with all features}
-log_reg_tune_spec <- create_log_tune_spec()
-tree_tune_spec <- create_tree_tune_spec()
-neural_net_spec <- create_neural_net_spec(epochs = 20)
-
+```{r split data into train and test sets}
 data_split <- initial_split(data_df, strata = Class)
 data_train <- training(data_split)
 data_test <- testing(data_split)
 
-head(data_test)
-source("data-analysis.r")
+selected_data_split <- initial_split(data_df_selected, strata = Class)
+selected_data_train <- training(selected_data_split)
+selected_data_test <- testing(selected_data_split)
+```
 
-#log_reg_workflows <- tune_with_data(log_reg_tune_spec, data_train, list(undersample_recipe))
-tree_workflows <- tune_with_data(tree_tune_spec, data_train, list(undersample_recipe))
-log_reg_workflows <- list()
-neural_net_workflows <- list()
+```{r Create models specification}
+log_reg_tune_spec <- create_log_tune_spec()
+tree_tune_spec <- create_tree_tune_spec()
+neural_net_spec <- create_neural_net_spec(epochs = 20)
+```
 
-for (recipe in list(undersample_recipe, oversample_recipe)) {
-  neural_net_workflows <- append(neural_net_workflows, list(workflow() %>% add_model(neural_net_spec) %>% add_recipe(recipe)))
-  log_reg_workflows <- append(log_reg_workflows, list(workflow() %>% add_model(log_reg_tune_spec) %>% add_recipe(recipe)))
-}
+```{r training and testing on dataset with all features and using undersample}
+log_reg_undersample_workflow <- tune_with_data(log_reg_tune_spec, data_train, undersample_recipe)
+log_req_undersample_final_fit <- fit_and_eval(log_reg_undersample_workflow, data_split)
+log_req_undersample_final_fit %>% collect_metrics()
 
-fit_and_eval(log_reg_workflows[[1]], data_split)
-fit_and_eval(log_reg_workflows[[2]], data_split)
+tree_undersample_workflow <- tune_with_data(tree_tune_spec, data_train, undersample_recipe)
+tree_undersample_final_fit <- fit_and_eval(tree_undersample_workflow, data_split)
+tree_undersample_final_fit %>% collect_metrics()
 
-fit_and_eval(tree_workflows[[1]], data_split)
-#fit_and_eval(tree_workflows[[2]], data_split)
+neural_net_undersample_workflow <- tune_with_data(neural_net_spec, data_train, undersample_recipe)
+neural_net_undersample_final_fit <- fit_and_eval(neural_net_undersample_workflow, data_split)
+neural_net_undersample_final_fit %>% collect_metrics()
+```
 
-fit_and_eval(neural_net_workflows[[1]], data_split)
-fit_and_eval(neural_net_workflows[[2]], data_split)
+
+```{r training and testing on dataset with selected features and using undersample}
+log_reg_undersample_selected_workflow <- tune_with_data(log_reg_tune_spec, selected_data_train, selected_undersample_recipe)
+log_req_undersample_selected_final_fit <- fit_and_eval(log_reg_undersample_selected_workflow, selected_data_split)
+log_req_undersample_selected_final_fit %>% collect_metrics()
+
+tree_undersample_selected_workflow <- tune_with_data(tree_tune_spec, selected_data_train, selected_undersample_recipe)
+tree_undersample_selected_final_fit <- fit_and_eval(tree_undersample_selected_workflow, selected_data_split)
+tree_undersample_selected_final_fit %>% collect_metrics()
+
+neural_net_undersample_selected_workflow <- tune_with_data(neural_net_spec, selected_data_train, selected_undersample_recipe)
+neural_net_undersample_selected_final_fit <- fit_and_eval(neural_net_undersample_selected_workflow, selected_data_split)
+neural_net_undersample_selected_final_fit %>% collect_metrics()
 
 ```
-Znalezione najlepsze hiperparametry dla drzewa przedstawione są poniżej.
 
 
+```{r training and testing on dataset with all features and using oversample}
+log_reg_oversample_workflow <- tune_with_data(log_reg_tune_spec, data_train, oversample_recipe)
+log_req_oversample_final_fit <- fit_and_eval(log_reg_oversample_workflow, data_split)
+log_req_oversample_final_fit %>% collect_metrics()
 
+tree_oversample_workflow <- tune_with_data(tree_tune_spec, data_train, oversample_recipe)
+tree_oversample_final_fit <- fit_and_eval(tree_oversample_workflow, data_split)
+tree_oversample_final_fit %>% collect_metrics()
+
+neural_net_oversample_workflow <- tune_with_data(neural_net_spec, data_train, oversample_recipe)
+neural_net_oversample_final_fit <- fit_and_eval(neural_net_oversample_workflow, data_split)
+neural_net_oversample_final_fit %>% collect_metrics()
+
+```
+
+
+```{r training and testing on dataset with selected features and using oversample}
+log_reg_oversample_selected_workflow <- tune_with_data(log_reg_tune_spec, selected_data_train, selected_oversample_recipe)
+log_req_oversample_selected_final_fit <- fit_and_eval(log_reg_oversample_selected_workflow, selected_data_split)
+log_req_oversample_selected_final_fit %>% collect_metrics()
+
+tree_oversample_selected_workflow <- tune_with_data(tree_tune_spec, selected_data_train, selected_oversample_recipe)
+tree_oversample_selected_final_fit <- fit_and_eval(tree_oversample_selected_workflow, selected_data_split)
+tree_oversample_selected_final_fit %>% collect_metrics()
+
+neural_net_oversample_selected_workflow <- tune_with_data(neural_net_spec, selected_data_train, selected_oversample_recipe)
+neural_net_oversample_selected_final_fit <- fit_and_eval(neural_net_oversample_selected_workflow, selected_data_split)
+neural_net_oversample_selected_final_fit %>% collect_metrics()
+```
 ## Drzewo klasyfikacji    
 
 ## Regresja liniowa
