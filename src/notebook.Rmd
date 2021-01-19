@@ -258,7 +258,8 @@ selected_data_test <- testing(selected_data_split)
 ```{r Create models specification}
 log_reg_tune_spec <- create_log_tune_spec()
 tree_tune_spec <- create_tree_tune_spec()
-neural_net_spec <- create_neural_net_spec(epochs = 20)
+undersample_neural_net_spec <- create_neural_net_spec(epochs = 200)
+oversample_neural_net_spec <- create_neural_net_spec(epochs = 40)
 ```
 
 ```{r training and testing on dataset with all features and using undersample}
@@ -270,7 +271,7 @@ tree_undersample_workflow <- tune_with_data(tree_tune_spec, data_train, undersam
 tree_undersample_final_fit <- fit_and_eval(tree_undersample_workflow, data_split)
 tree_undersample_final_fit %>% collect_metrics()
 
-neural_net_undersample_workflow <- tune_with_data(neural_net_spec, data_train, undersample_recipe)
+neural_net_undersample_workflow <- workflow() %>% add_model(undersample_neural_net_spec) %>% add_recipe(undersample_recipe)
 neural_net_undersample_final_fit <- fit_and_eval(neural_net_undersample_workflow, data_split)
 neural_net_undersample_final_fit %>% collect_metrics()
 ```
@@ -285,7 +286,7 @@ tree_undersample_selected_workflow <- tune_with_data(tree_tune_spec, selected_da
 tree_undersample_selected_final_fit <- fit_and_eval(tree_undersample_selected_workflow, selected_data_split)
 tree_undersample_selected_final_fit %>% collect_metrics()
 
-neural_net_undersample_selected_workflow <- tune_with_data(neural_net_spec, selected_data_train, selected_undersample_recipe)
+neural_net_undersample_selected_workflow <- workflow() %>% add_model(undersample_neural_net_spec) %>% add_recipe(selected_undersample_recipe)
 neural_net_undersample_selected_final_fit <- fit_and_eval(neural_net_undersample_selected_workflow, selected_data_split)
 neural_net_undersample_selected_final_fit %>% collect_metrics()
 
@@ -301,7 +302,7 @@ tree_oversample_workflow <- tune_with_data(tree_tune_spec, data_train, oversampl
 tree_oversample_final_fit <- fit_and_eval(tree_oversample_workflow, data_split)
 tree_oversample_final_fit %>% collect_metrics()
 
-neural_net_oversample_workflow <- tune_with_data(neural_net_spec, data_train, oversample_recipe)
+neural_net_oversample_workflow <- workflow() %>% add_model(oversample_neural_net_spec) %>% add_recipe(oversample_recipe)
 neural_net_oversample_final_fit <- fit_and_eval(neural_net_oversample_workflow, data_split)
 neural_net_oversample_final_fit %>% collect_metrics()
 
@@ -317,7 +318,7 @@ tree_oversample_selected_workflow <- tune_with_data(tree_tune_spec, selected_dat
 tree_oversample_selected_final_fit <- fit_and_eval(tree_oversample_selected_workflow, selected_data_split)
 tree_oversample_selected_final_fit %>% collect_metrics()
 
-neural_net_oversample_selected_workflow <- tune_with_data(neural_net_spec, selected_data_train, selected_oversample_recipe)
+neural_net_oversample_selected_workflow <- workflow() %>% add_model(oversample_neural_net_spec) %>% add_recipe(selected_oversample_recipe)
 neural_net_oversample_selected_final_fit <- fit_and_eval(neural_net_oversample_selected_workflow, selected_data_split)
 neural_net_oversample_selected_final_fit %>% collect_metrics()
 ```
