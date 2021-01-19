@@ -49,9 +49,8 @@ def_par = par(no.readonly = TRUE)
 if (!grepl('src$', getwd())) {
   setwd("src")
 }
-source("data-analysis.r")
-data_df <- read.csv("creditcard.csv")
-data_df$Class <- as.factor(data_df$Class)
+source("common.r")
+load("rdata/datadf.Rdata")
 ```
 
 
@@ -199,10 +198,7 @@ oversampled_df$Class <- as.factor(oversampled_df$Class)
 W tym podrozdziale przeprowadzono selekcję atrybutów za pomocą automatycznej metody wybierajacej 10 atrybutów o najwiekszej wartosci "variable importance" z lasu losowego. 
 Wykorzystano las losowy z pakietu "ranger" złożony z 50 drzew.
 ```{r feature selection}
-# ensure the results are repeatable
-set.seed(7)
-trControl = trainControl(method="cv", number = 5, allowParallel = TRUE, verbose = TRUE)
-rf_fit <- train(Class ~ ., data = data_df, method = "ranger", num.trees = 50, trControl = trControl, importance = 'impurity')
+load("rdata/rf_fit.Rdata")
 imp <- varImp(rf_fit, scale = FALSE)
 plot(imp)
 imp <- data.frame(imp[1])
@@ -245,95 +241,35 @@ Modele o najlepszych parametrach zostały ostatecznie wyuczone na całym zbiorze
 
 Głównym kryterium oceny jakości modeli jest pole pod krzywą ROC. Do tworzenia modeli, uczenia oraz ich strojenia wykorzystana została biblioteka tidymodels.
 
-```{r split data into train and test sets}
-data_split <- initial_split(data_df, strata = Class)
-data_train <- training(data_split)
-data_test <- testing(data_split)
+## Tutaj tylko wypisujemy wyniki, krzywe uczenia i inne takie rzeczy, ktore juz sa gotowe w plikach Rdata.
 
-selected_data_split <- initial_split(data_df_selected, strata = Class)
-selected_data_train <- training(selected_data_split)
-selected_data_test <- testing(selected_data_split)
-```
-
-```{r Create models specification}
-log_reg_tune_spec <- create_log_tune_spec()
-tree_tune_spec <- create_tree_tune_spec()
-undersample_neural_net_spec <- create_neural_net_spec(epochs = 200)
-oversample_neural_net_spec <- create_neural_net_spec(epochs = 40)
-```
-
-```{r training and testing on dataset with all features and using undersample}
-log_reg_undersample_workflow <- tune_with_data(log_reg_tune_spec, data_train, undersample_recipe)
-log_req_undersample_final_fit <- fit_and_eval(log_reg_undersample_workflow, data_split)
+## Regresja logistyczna
+```{r logistic regression}
+load("rdata/log_req_undersample_final_fit.Rdata")
 log_req_undersample_final_fit %>% collect_metrics()
 
-tree_undersample_workflow <- tune_with_data(tree_tune_spec, data_train, undersample_recipe)
-tree_undersample_final_fit <- fit_and_eval(tree_undersample_workflow, data_split)
-tree_undersample_final_fit %>% collect_metrics()
-
-neural_net_undersample_workflow <- workflow() %>% add_model(undersample_neural_net_spec) %>% add_recipe(undersample_recipe)
-neural_net_undersample_final_fit <- fit_and_eval(neural_net_undersample_workflow, data_split)
-neural_net_undersample_final_fit %>% collect_metrics()
-```
-
-
-```{r training and testing on dataset with selected features and using undersample}
-log_reg_undersample_selected_workflow <- tune_with_data(log_reg_tune_spec, selected_data_train, selected_undersample_recipe)
-log_req_undersample_selected_final_fit <- fit_and_eval(log_reg_undersample_selected_workflow, selected_data_split)
+load( "rdata/log_req_undersample_selected_final_fit.Rdata")
 log_req_undersample_selected_final_fit %>% collect_metrics()
 
-tree_undersample_selected_workflow <- tune_with_data(tree_tune_spec, selected_data_train, selected_undersample_recipe)
-tree_undersample_selected_final_fit <- fit_and_eval(tree_undersample_selected_workflow, selected_data_split)
-tree_undersample_selected_final_fit %>% collect_metrics()
-
-neural_net_undersample_selected_workflow <- workflow() %>% add_model(undersample_neural_net_spec) %>% add_recipe(selected_undersample_recipe)
-neural_net_undersample_selected_final_fit <- fit_and_eval(neural_net_undersample_selected_workflow, selected_data_split)
-neural_net_undersample_selected_final_fit %>% collect_metrics()
-
-```
-
-
-```{r training and testing on dataset with all features and using oversample}
-log_reg_oversample_workflow <- tune_with_data(log_reg_tune_spec, data_train, oversample_recipe)
-log_req_oversample_final_fit <- fit_and_eval(log_reg_oversample_workflow, data_split)
+load("rdata/log_req_oversample_final_fit.Rdata")
 log_req_oversample_final_fit %>% collect_metrics()
 
-tree_oversample_workflow <- tune_with_data(tree_tune_spec, data_train, oversample_recipe)
-tree_oversample_final_fit <- fit_and_eval(tree_oversample_workflow, data_split)
-tree_oversample_final_fit %>% collect_metrics()
-
-neural_net_oversample_workflow <- workflow() %>% add_model(oversample_neural_net_spec) %>% add_recipe(oversample_recipe)
-neural_net_oversample_final_fit <- fit_and_eval(neural_net_oversample_workflow, data_split)
-neural_net_oversample_final_fit %>% collect_metrics()
-
+load("data/log_req_oversample_selected_final_fit.Rdata")
+log_req_oversample_selected_final_fit %>% collect_metrics() # i różne takie trza porobc. Trza ogarnac jak wyluskiwac F-score, accuracy itp.
+#
 ```
 
+## Drzewo klasyfikacji  
 
-```{r training and testing on dataset with selected features and using oversample}
-log_reg_oversample_selected_workflow <- tune_with_data(log_reg_tune_spec, selected_data_train, selected_oversample_recipe)
-log_req_oversample_selected_final_fit <- fit_and_eval(log_reg_oversample_selected_workflow, selected_data_split)
-log_req_oversample_selected_final_fit %>% collect_metrics()
-
-tree_oversample_selected_workflow <- tune_with_data(tree_tune_spec, selected_data_train, selected_oversample_recipe)
-tree_oversample_selected_final_fit <- fit_and_eval(tree_oversample_selected_workflow, selected_data_split)
-tree_oversample_selected_final_fit %>% collect_metrics()
-
-neural_net_oversample_selected_workflow <- workflow() %>% add_model(oversample_neural_net_spec) %>% add_recipe(selected_oversample_recipe)
-neural_net_oversample_selected_final_fit <- fit_and_eval(neural_net_oversample_selected_workflow, selected_data_split)
-neural_net_oversample_selected_final_fit %>% collect_metrics()
+```{r decision tree}
+#TODO
 ```
-## Drzewo klasyfikacji    
-
-## Regresja liniowa
 
 ## Sieć neuronowa
 
-# Ocena jakości modeli
+```{r neural network}
+#TODO
+```
 
-## Drzewo klasyfikacji
-
-## Regresja liniowa
-
-## Sieć neuronowa
-
+  
 # Podsumowanie
