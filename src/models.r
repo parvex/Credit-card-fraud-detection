@@ -42,11 +42,12 @@ set.seed(7)
 trControl = trainControl(method="cv", number = 5, allowParallel = TRUE, verbose = TRUE)
 rf_fit <- train(Class ~ ., data = data_df, method = "ranger", num.trees = 50, trControl = trControl, importance = 'impurity')
 
-save(rf_fit, "rdata/rf_fit.Rdata")
+save(rf_fit, file = "rdata/rf_fit.Rdata")
 
 imp <- varImp(rf_fit, scale = FALSE)
 imp <- data.frame(imp[1])
-features <- rownames(imp)[order(imp$Overall, decreasing=TRUE)][1:10]
+rownames(imp)[imp$Overall > mean(imp$Overall)]
+features <- rownames(imp)[imp$Overall > mean(imp$Overall)]
 
 data_df_selected <- data_df[,which(names(data_df) %in% c(features, "Class"))]
 

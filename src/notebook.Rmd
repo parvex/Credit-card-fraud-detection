@@ -202,7 +202,8 @@ load("rdata/rf_fit.Rdata")
 imp <- varImp(rf_fit, scale = FALSE)
 plot(imp)
 imp <- data.frame(imp[1])
-features <- rownames(imp)[order(imp$Overall, decreasing=TRUE)][1:10]
+rownames(imp)[imp$Overall > mean(imp$Overall)]
+features <- rownames(imp)[imp$Overall > mean(imp$Overall)]
 ```
 Wybrane atrybuty: ${features}
 
