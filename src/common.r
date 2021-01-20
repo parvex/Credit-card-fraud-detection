@@ -73,7 +73,7 @@ tune_with_data <- function (tune_spec, data, recipe, kfolds = 10) {
 }
 
 fit_and_eval <- function(workflow, data_split) {
-  final_fit <- last_fit(workflow, split = data_split)
+  final_fit <- last_fit(workflow, split = data_split, metrics = metric_set(roc_auc, accuracy, f_meas))
   
   final_fit %>%
     collect_metrics()
