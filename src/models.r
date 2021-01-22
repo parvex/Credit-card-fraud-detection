@@ -74,8 +74,8 @@ selected_data_test <- testing(selected_data_split)
 
 log_reg_tune_spec <- create_log_tune_spec()
 tree_tune_spec <- create_tree_tune_spec()
-undersample_neural_net_spec <- create_neural_net_spec(epochs = 200)
-oversample_neural_net_spec <- create_neural_net_spec(epochs = 40)
+undersample_neural_net_spec <- create_neural_net_spec(epochs = 300)
+oversample_neural_net_spec <- create_neural_net_spec(epochs = 50)
 
 # LOGISTIC REGRESSION
 # training and testing on dataset with all features and using undersample

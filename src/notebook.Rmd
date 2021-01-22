@@ -260,17 +260,44 @@ log_req_oversample_selected_final_fit %>% collect_metrics() # i różne takie tr
 #
 ```
 
-## Drzewo klasyfikacji  
-
+## Drzewo klasyfikacji
 ```{r decision tree}
-#TODO
+load("rdata/tree_undersample_final_fit.Rdata")
+tree_undersample_final_fit %>% collect_metrics()
+
+load( "rdata/tree_undersample_selected_final_fit.Rdata")
+tree_undersample_selected_final_fit %>% collect_metrics()
+
+load("rdata/tree_oversample_final_fit.Rdata")
+tree_oversample_final_fit %>% collect_metrics()
+
+load("data/tree_oversample_selected_final_fit.Rdata")
+tree_oversample_selected_final_fit %>% collect_metrics() # i różne takie trza porobc. Trza ogarnac jak wyluskiwac F-score, accuracy itp.
+#
 ```
 
-## Sieć neuronowa
-
+## Siec neuronowa
 ```{r neural network}
-#TODO
+load("rdata/neural_net_undersample_final_fit.Rdata")
+metrics <- neural_net_undersample_final_fit %>% collect_metrics()
+estimates = metrics[,".estimate"]
+neural_net_results <- data.frame(c(estimates[1,], estimates[2,], estimates[3,]))
+colnames(neural_net_results) <- c("accuracy", "f-score", "roc_auc")
+
+load( "rdata/neural_net_undersample_selected_final_fit.Rdata")
+metrics <- neural_net_undersample_selected_final_fit %>% collect_metrics()
+add_metrics_to_results(metrics[,".estimate"], neural_net_results)
+
+load("rdata/neural_net_oversample_final_fit.Rdata")
+metrics <- neural_net_oversample_selected_final_fit %>% collect_metrics()
+add_metrics_to_results(metrics[,".estimate"], neural_net_results)
+
+load("data/neural_net_oversample_selected_final_fit.Rdata")
+metrics <- neural_net_oversample_selected_final_fit %>% collect_metrics() 
+add_metrics_to_results(metrics[,".estimate"], neural_net_results)
+#
 ```
+
 
   
 # Podsumowanie

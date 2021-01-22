@@ -86,3 +86,6 @@ fit_and_eval <- function(workflow, data_split) {
   return(final_fit)
 }
 
+add_metrics_to_results <- function(metrics, data_frame) {
+  return(data_frame[nrow(data_frame) + 1,] <- c("accuracy" = metrics[1,], "f-score" = metrics[2,], "roc_auc" = metrics[3,]))
+}
