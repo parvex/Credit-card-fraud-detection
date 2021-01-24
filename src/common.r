@@ -16,7 +16,8 @@ corMatrix <- function (data, title) {
            type = "lower",
            tl.col = "black", tl.srt = 45,
            main = title,
-           mar=c(0,0,1,0)
+           mar=c(0,0,1,0),
+           tl.cex=1
   )
   return(cor_matrix)
 }
@@ -74,17 +75,7 @@ tune_with_data <- function (tune_spec, data, recipe, kfolds = 10) {
 }
 
 fit_and_eval <- function(workflow, data_split) {
-  final_fit <- last_fit(workflow, split = data_split, metrics = metric_set(roc_auc, accuracy, f_meas))
-  
-  final_fit %>%
-    collect_metrics()
-
-  final_fit %>%
-    collect_predictions() %>% 
-    roc_curve(Class, .pred_0) %>% 
-    autoplot()
-  
-  return(final_fit)
+  return(last_fit(workflow, split = data_split, metrics = metric_set(roc_auc, accuracy, f_meas)))
 }
 
 add_metrics_to_results <- function(metrics, data_frame, dataset_type) {
