@@ -8,7 +8,7 @@ output:
     code_folding: hide
 ---
 
-# Interpretacja tematu projektu
+# Wstęp - interpretacja tematu projektu
 
 Wybranym zadaniem jest analiza problemu klasyfikacji na zbiorze danych _Credit Card Fraud Detection_ dostępnym w serwisie Kaggle.com.
 
@@ -19,11 +19,13 @@ Zakres projektu obejmuje 4 podstawowe sfery:
 * przygotowanie, uczenie i strojenie modeli wybranych spośród dostępnych w języku R,
 * ocenę i porównanie modeli wraz z adekwatnymi wnioskami.
 
-# Analiza danych
 
-```{r init}
+```{r init, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.width=12, fig.height=8)
+pdf.options(encoding = 'ISOLatin2')
 Sys.setlocale(category = "LC_ALL", locale = "Polish")
-install.packages("pacman")
+install.packages("pacman", repos = "http://cran.us.r-project.org")
 library(pacman)
 pacman::p_load(skimr, 
                dplyr, 
@@ -52,34 +54,37 @@ if (!grepl('src$', getwd())) {
 source("common.r")
 load("rdata/datadf.Rdata")
 ```
+# Analiza danych
+
+Zbiór danych przeanalizowano pod kątem czynników które mają lub mogą mieć wpływ na sposób ich przygotowania oraz dobór parametrów modeli. 
 
 
-Zbiór danych należy przeanalizować pod kątem czynników które mają lub mogą mieć wpływ na sposób ich przygotowania oraz dobór parametrów modeli.
-
-
-Pierwsze 6 rekordków zbioru danych:
+Pierwsze 6 rekordów zbioru danych:
 ```{r head}
 head(data_df)
 ```
 
+Mamy do czynienia ze zbiorem, zawierajacym 31 atrybutów: 28 atrybutów V1-V28 zawierających pewne informacje o transakcji, atrybuty Time oraz Amount określające moment transakcji (liczba sekund od ustalonego czasu wyjściowego) oraz jej kwotę, oraz atrybut Class, określający czy transakcja jest oszustwem (wartość 1) czy nie (wartość 0). Atrybut Class jest atrybutem docelowym w naszej analizie.
+
+Sprawdziliśmy, czy zbiór posiada wartości NaN.
 
 ```{r nulls-check}
 checkNans(data_df)
-
 ```
 
-Podstawowa analiza statystyczna zbioru danych:
+Podstawowa analiza statystyczna zbioru danych za pomocą funkcji skim() wygląda następujaco:
 
 ```{r summarize}
 skim(data_df)
 ```
 
+Wynika z niej przede wszystkim fakt, że zbiór danych jest niezbalansowany pod katem liczby wykrytych oszustw w stosunku do liczby transakcji poprawnych. Niezrównoważnie bardzo dobrze uwydatnia poniższy wykres: 
 
 ```{r rozklad-klas}
 common_theme <- theme(plot.title = element_text(hjust = 0.5, face = "bold"))
 
 ggplot(data_df, aes(x = Class, y = prop.table(stat(count)), fill = factor(Class),
-                          label = scales::percent(prop.table(stat(count))))) +
+                          label = sprintf("%0.3f %%", prop.table(stat(count)) * 100))) +
   geom_bar(aes(y = (..count..) / sum(..count..))) +
   labs(y = "%", x = "Klasa") +
   geom_text(stat = 'count',
@@ -92,41 +97,37 @@ ggplot(data_df, aes(x = Class, y = prop.table(stat(count)), fill = factor(Class)
   common_theme + 
   labs(fill = "Klasa")
 ```
-```{r rozklad-klas-tabela}
-summarize(data_df, type = "factor", variables = "Class", cumulative = TRUE, digits = 4)
-```
 
-Jak widać z danych odnośnie kolumny class - zbiór danych jest niezrównoważony.
-
-Skalowanie kolumn Time oraz Amount.
+Widać także, że kolumny Amount oraz Time nie są przeskalowane. Wykonaliśmy więc standaryzację Z na tych kolumnach.
 
 ```{r scale}
 data_df <- data_df %>% mutate_at(c("Amount", "Time"), ~ (scale(.) %>% as.vector()))
 ```
 
-Wartości transakcji są skupione w większości na najniższych wartościach, jednakże występują również ekstremalne wartości.
+Ponadto, można zauważyć, że wartości transakcji są skupione w większości na najniższych wartościach, jednakże występują również ekstremalne wartości.
+
+Dla oryginalnego zbioru danych stworzyliśmy macierz korelacji, aby sprawdzić, czy między atrybutami są jakieś zależności.
 
 ```{r correlation-matrix-unbalanced}
 #correlation matrix for unbalanced set
 cor_matrix <- corMatrix(data_df, "Macierz korelacji dla niezbalansowanego zbioru")
-cor_matrix
 ```
 
 Jak widać, z macierzy korelacji dla niezbalansowanego zbioru nie wynika wiele. Przyczyną tego są zaburzenia wynikające właśnie z jego niezbalansowania. Należy sprawdzić czy zbalansowanie poprawi odczyt korelacji.
 
-## Przetwarzanie danych
+# Przetwarzanie danych
 
 W celu dalszej analizy zbioru zastosowano przekształcenia:
 
 * zbiór został podzielony na dwa zbalansowane zbiory:
-  + z wykorzystaniem techniki undersampling;
+  + z wykorzystaniem techniki undersampling,
   + z wykorzystaniem techniki oversampling.
 
-Undersampling losowo dobiera wartości z klasą dominującą. Oversampling zaś generuje nowe wartości klasy o mniejszej liczności na podstawie istniejących wartości.
+Undersampling wybiera wszystkie rekordy z klasą mniejszościową i dla każdego z nich losowo dobiera wartości z klasą dominującą. Oversampling zaś generuje nowe wartości klasy o mniejszej liczności na podstawie istniejących wartości.
 
 ## Undersampling
 
-Zbiór poddany został przekształceniu undersampling dzięki czemu powstał zbalansowany zbiór złożony z istniejących wartości klasy stanowiącej mniejszość oraz losowo wybranych rekordów o klasie większościowej.
+Zbiór poddany został przekształceniu undersampling dzięki czemu powstał zbalansowany zbiór złożony z wszystkich istniejących wartości klasy stanowiącej mniejszość oraz losowo wybranych rekordów o klasie większościowej.
 ```{r undersampling-cor-matrix}
 # Perform undersampling and plot correlation matrix
 
@@ -134,19 +135,16 @@ undersample_recipe <- recipe(Class~., data = data_df) %>%
   themis::step_downsample(Class)
 
 undersampled_df <-undersample_recipe %>% prep(training = data_df) %>% bake(new_data=NULL)
-
-table(undersampled_df$Class)
-
-skim(undersampled_df)
+n_rows <- nrow(undersampled_df)
 
 cor_matrix <- corMatrix(undersampled_df, "Macierz korelacji dla zbioru poddanemu \"undersampling\".")
 ```
 
-Z macierzy korelacji dla danych zbalansowanych wynikają korelacje między klasą a pozostałymi kolumnami.
+Po przeprowadzeniu operacji w zbiorze znajduje się `r n_rows` wierszy. Z macierzy korelacji dla danych zbalansowanych wynikają korelacje między wartością atrybutu Class a niektórymi z pozostałych atrybutów.
 
-Poniżej przedstawione są wykresy pudełkowe dla atrybutów o największych korelacjach w zbiorze poddanym przekształceniu undersampling.
+Poniżej przedstawione są wykresy pudełkowe dla atrybutów o największych korelacjach (wartość absolutna większa niż 0.5) w zbiorze poddanym przekształceniu undersampling.
 
-```{r undersampling-cor-boxplot}
+```{r undersampling-cor-boxplot, include=FALSE}
 # Take variables which have significant correlation with Class. Use oversampled set.
 class_corrs <- cor_matrix["Class", ][-ncol(undersampled_df)]
 big_corrs <- names(class_corrs)[abs(class_corrs) > 0.5]
@@ -154,33 +152,32 @@ big_corrs <- names(class_corrs)[abs(class_corrs) > 0.5]
 melted <- undersampled_df %>% select(big_corrs, Class) %>% melt(id.var = "Class")
 ggplot(melted, aes(x=variable, y=value)) + 
   geom_boxplot(aes(fill=Class)) + 
-  facet_wrap( ~ variable, scales="free")
+  facet_wrap( ~ variable, scales="free") +
+  labs(y = "Wartość", x = "Atrybut", fill = "Klasa")
 
 undersampled_df$Class <- as.factor(undersampled_df$Class)
 ```
 
-## Oversampling 
+## Oversampling
 
-Zbiór poddany został przekształceniu oversamping, dzięki czemu powstał zbalansowany zbiór złożony z istniejących rekordów klasy mniejszościowej, nowo wygenerowanych rekordów klasy mniejszościowej oraz losowo wybranych rekordów o klasie większościowej.
+Zbiór poddany został przekształceniu oversamping z zastosowaniem techniki SMOTE, dzięki czemu powstał zbalansowany zbiór złożony z istniejących rekordów klasy mniejszościowej, nowo wygenerowanych rekordów klasy mniejszościowej (na podstawie istniejących już rekordów) oraz losowo wybranych rekordów o klasie większościowej.
 
 ```{r oversampling-cor-matrix}
 # Perform oversampling and plot correlation matrix
-
 oversample_recipe <- recipe(Class~., data = data_df) %>%
   themis::step_smote(Class)
 
 oversampled_df <- oversample_recipe %>% prep(training = data_df) %>% bake(new_data=NULL)
-
-table(oversampled_df$Class)
-
-skim(oversampled_df)
+n_rows <- nrow(oversampled_df)
 
 cor_matrix <- corMatrix(oversampled_df, "Macierz korelacji dla zbioru poddanemu \"oversampling\".")
 ```
 
+Po przeprowadzeniu operacji w zbiorze znajduje się `r n_rows` wierszy. Z macierzy korelacji dla tego zbioru również wynikają zależności między atrybutem Class oraz niektórymi z pozostałych.
+
 Poniżej przedstawione są wykresy pudełkowe dla atrybutów o największych korelacjach w zbiorze poddanym oversamplingowi.
 
-```{r oversampling-cor-boxplot}
+```{r oversampling-cor-boxplot, include=FALSE}
 # Take variables which have significant correlation with Class. Use oversampled set.
 class_corrs <- cor_matrix["Class", ][-ncol(oversampled_df)]
 big_corrs <- names(class_corrs)[abs(class_corrs) > 0.5]
@@ -188,16 +185,18 @@ big_corrs <- names(class_corrs)[abs(class_corrs) > 0.5]
 melted <- oversampled_df %>% select(big_corrs, Class) %>% melt(id.var = "Class")
 ggplot(melted, aes(x=variable, y=value)) + 
   geom_boxplot(aes(fill=Class)) + 
-  facet_wrap( ~ variable, scales="free")
+  facet_wrap( ~ variable, scales="free") +
+  labs(y = "Wartość", x = "Atrybut", fill = "Klasa")
 
 oversampled_df$Class <- as.factor(oversampled_df$Class)
 ```
+Zarówno w przypadku operacji undersampling jak i oversampling na przedstawionych wykresach pudełkowych widać wyraźnie różnicę w charakterystyce niektórych atrybutów w zależności od klasy. W przypadku klasy 1, czyli oszustwa, wartości mają inną średnią oraz ich kwantyle rzędu 0.25 oraz 0.75 znacząco się różnią od tych dla klasy 0. 
 
-### Wybór atrybutów
+## Selekcja atrybutów
 
-W tym podrozdziale przeprowadzono selekcję atrybutów za pomocą automatycznej metody wybierajacej 10 atrybutów o najwiekszej wartosci "variable importance" z lasu losowego. 
+W tym podrozdziale przeprowadzono selekcję atrybutów za pomocą automatycznej metody wybierajacej atrybuty na podstawie wartości "variable importance" z lasu losowego. Wybierane są wartości większe od średniej wszystkich wartości. 
 Wykorzystano las losowy z pakietu "ranger" złożony z 50 drzew.
-```{r feature selection}
+```{r feature selection, include = FALSE}
 load("rdata/rf_fit.Rdata")
 imp <- varImp(rf_fit, scale = FALSE)
 plot(imp)
@@ -205,9 +204,11 @@ imp <- data.frame(imp[1])
 rownames(imp)[imp$Overall > mean(imp$Overall)]
 features <- rownames(imp)[imp$Overall > mean(imp$Overall)]
 ```
-Wybrane atrybuty: ${features}
+Wybrane atrybuty: `r features`
 
-Ponownie przeprowadzono przekształcenia undersampling oraz oversampling, tym razem na danych z wyłącznie wybranymi atrybutami.
+Ponownie przeprowadzono przekształcenia undersampling oraz oversampling, tym razem na danych zawierającyh wyłącznie wybrane atrybuty.
+
+Najpierw wykonano przekształcenie undersampling:
 ```{r feature selection continuation - undersample dataset with selected attributes}
 data_df_selected <- data_df[,which(names(data_df) %in% c(features, "Class"))]
 
@@ -220,8 +221,10 @@ selected_undersampled_df <- bake(selected_undersample_recipe, new_data=NULL)
 cor_matrix <- corMatrix(selected_undersampled_df, "Macierz korelacji dla zbioru poddanemu selekcji atrybutów oraz \"undersampling\".")
 ```
 
-```{r feature selection continuation - undersample dataset with selected attributes}
+Macierz korelacji dla tak stworzonego zbioru pokazuje, że wybrane atrybuty są bardzo mocno skorelowane z pojeciem docelowym.
 
+Następnie, wykonano przekształćenie oversampling.
+```{r feature selection continuation - oversample dataset with selected attributes}
 selected_oversample_recipe <- recipe(Class~., data = data_df_selected) %>%
   themis::step_smote(Class) %>%
   prep()
@@ -234,70 +237,102 @@ Z macierzy korelacji wynikają silne korelacje między wybranymi atrybutami oraz
 
 # Przygotowanie, uczenie i strojenie wybranych modeli
 
-W rozdziale tym przeprowadzono definiowanie modeli, uczenie oraz ich strojenie. Zbiór danych podzielono na dwa zbiory: trenujący oraz testujący. 
-Najpierw przeprowadzono eksperymenty z zastosowaniem techniki undersample, a pózniej techniki oversample. 
-W ramach porównania eksperymenty zostały przeprowadzone na pełnym zbiorze oraz na zbiorze zawierajacym wylacznie 10 wybranych atrybutow.
-Strojenie parametrów odbyło się na zbiorze trenującym z wykorzystaniem na nim 10-krotnej walidacji krzyżowej.
-Modele o najlepszych parametrach zostały ostatecznie wyuczone na całym zbiorze trenującym i ocenione na zbiorze testującym. 
+W tej sekcji przedstawiono wyniki uczenia modeli. Wybranymi przez nas typami modeli są regresja logistyczna, drzewo klasyfikacji oraz sieć neuronowa, a dokładnie perceptron dwuwartswowy.
 
-Głównym kryterium oceny jakości modeli jest pole pod krzywą ROC. Do tworzenia modeli, uczenia oraz ich strojenia wykorzystana została biblioteka tidymodels.
+Najpierw przeprowadzono eksperymenty na zbiorach z zastosowaniem techniki undersample, a pózniej techniki oversample. 
+W ramach porównania eksperymenty zostały przeprowadzone na pełnym zbiorze oraz na zbiorze zawierajacym wyłącznie wybrane atrybuty.
 
-## Tutaj tylko wypisujemy wyniki, krzywe uczenia i inne takie rzeczy, ktore juz sa gotowe w plikach Rdata.
+Przed procesem uczenia zostały stworzone specyfikacje modeli, z których model regresji logistycznej oraz drzewa klasyfikacji poddano strojeniu hiperparametrów metodą optymalizacji Bayesowskiej. Strojonym hiperparametrem w modelu regresji logistycznej był współczynnik kary dla regularyzacji L2. W przypadku drzewa klasyfikacji strojonymi hiperparametrami były współczynnik kary za złożoność drzewa, maksymalna głębokość drzewa oraz minimalna liczba danych w węźle, przy której należy dokonać podziału.
+Zbiór danych podzielono na dwa zbiory: trenujący oraz testujący.
+Strojenie parametrów odbyło się na zbiorze trenującym z wykorzystaniem na nim 10-krotnej walidacji krzyżowej, w którym kryterium oceny jakości było pole pod krzywą ROC.
+
+Modele o najlepszych parametrach zostały ostatecznie wyuczone na całym zbiorze trenującym, a ich jakość określona na zbiorze testującym. 
+
+Głównym kryterium oceny jakości modeli jest pole pod krzywą ROC. Ponadto, zmierzono także dokładność modelu (accuracy) oraz f-score. Do tworzenia modeli, uczenia oraz ich strojenia wykorzystana została biblioteka tidymodels.
 
 ## Regresja logistyczna
+
+Wykorzystano model regresji logistycznej z metodą regularyzacji L2. Poniżej przedstawiono zestawienie wartości miar jakości modelu dla regresji logistycznej:
 ```{r logistic regression}
 load("rdata/log_req_undersample_final_fit.Rdata")
-log_req_undersample_final_fit %>% collect_metrics()
+metrics <- log_req_undersample_final_fit %>% collect_metrics()
+estimates = metrics[,".estimate"]
+log_reg_results <- data.frame(c("Undersample", estimates[1,], estimates[2,], estimates[3,]))
+colnames(log_reg_results) <- c("Zbiór", "Dokładność", "f-score", "Pole pod krzywą ROC")
 
 load( "rdata/log_req_undersample_selected_final_fit.Rdata")
-log_req_undersample_selected_final_fit %>% collect_metrics()
+metrics <- log_req_undersample_selected_final_fit %>% collect_metrics()
+log_reg_results <- add_metrics_to_results(metrics, log_reg_results, "Undersample z selekcją atrybutów")
 
 load("rdata/log_req_oversample_final_fit.Rdata")
-log_req_oversample_final_fit %>% collect_metrics()
+metrics <- log_req_oversample_final_fit %>% collect_metrics()
+log_reg_results <- add_metrics_to_results(metrics, log_reg_results, "Oversample")
 
-load("data/log_req_oversample_selected_final_fit.Rdata")
-log_req_oversample_selected_final_fit %>% collect_metrics() # i różne takie trza porobc. Trza ogarnac jak wyluskiwac F-score, accuracy itp.
+load("rdata/log_req_oversample_selected_final_fit.Rdata")
+metrics <- log_req_oversample_selected_final_fit %>% collect_metrics()
+log_reg_results <- add_metrics_to_results(metrics, log_reg_results, "Oversample z selekcją atrybutów")
+
+log_reg_results
 #
 ```
+
+Patrząc na najważniejsze dla nas kryterium, to znaczy na pole pod krzywą ROC, można zauważyć, że model lepiej radzi sobie w przypadku, gdy został wytrenowany na danych zawierających wszystkie atrybuty. Może to oznaczać, że zostało odrzuconych zbyt dużo atrybutów. Nie widać natomiast wyraźnej różnicy między wynikami dla zbiorów poddanych przekształceniom undersample oraz oversample.
 
 ## Drzewo klasyfikacji
+
+Poniżej przedstawiono zestawienie wartości miar jakości modelu dla drzewa klasyfikacji:
+
 ```{r decision tree}
 load("rdata/tree_undersample_final_fit.Rdata")
-tree_undersample_final_fit %>% collect_metrics()
+metrics <- tree_undersample_final_fit %>% collect_metrics()
+estimates = metrics[,".estimate"]
+tree_results <- data.frame(c("Undersample", estimates[1,], estimates[2,], estimates[3,]))
+colnames(tree_results) <- c("Zbiór", "Dokładność", "f-score", "Pole pod krzywą ROC")
 
 load( "rdata/tree_undersample_selected_final_fit.Rdata")
-tree_undersample_selected_final_fit %>% collect_metrics()
+metrics <- tree_undersample_selected_final_fit %>% collect_metrics()
+tree_results <- add_metrics_to_results(metrics, tree_results, "Undersample z selekcją atrybutów")
 
 load("rdata/tree_oversample_final_fit.Rdata")
-tree_oversample_final_fit %>% collect_metrics()
+metrics <- tree_oversample_final_fit %>% collect_metrics()
+tree_results <- add_metrics_to_results(metrics, tree_results, "Oversample")
 
-load("data/tree_oversample_selected_final_fit.Rdata")
-tree_oversample_selected_final_fit %>% collect_metrics() # i różne takie trza porobc. Trza ogarnac jak wyluskiwac F-score, accuracy itp.
+load("rdata/tree_oversample_selected_final_fit.Rdata")
+metrics <- tree_oversample_selected_final_fit %>% collect_metrics() 
+tree_results <- add_metrics_to_results(metrics, tree_results, "Oversample z selekcją atrybutów")
+
+tree_results
 #
 ```
 
-## Siec neuronowa
+W przypadku drzewa wyraźnie widać poprawę działania w przypadku zbiorów poddanych "oversample" w stosunku do modeli, które przetwarzały zbiory "undersample". Wskazują na to dokładność oraz f-score. Jednakże, różnice zanikają w przypadku pola pod krzywą ROC. Oznacza to, że model odpowiadający zbiorowi "oversample" wykrywa oszustwa skuteczniej, lecz tylko dla określonego progu użytego do obliczenia dokładności i f-score (0.5). Dla innych progów odcięcia jakość modeli w obydwu przypadkach może być bardziej równa. Warto także zaznaczyć, że dla każdego zbioru wartości zarówno pola pod krzywą ROC jak i pozostałych miar jest niższa niż dla modelu regresji logistycznej, co czyni regresję logistyczną względnie lepszym modelem.
+
+## Sieć neuronowa
+
+Wykorzystano perceptron dwuwarstwowy z 64 neuronami w warstwie ukrytej oraz optymalizator Adam z domyślnymi parametrami (stopa uczenia 0.001, \beta1=0.9, \beta2=0.999). Poniżej przedstawiono wartości miar jakości modelu:
 ```{r neural network}
 load("rdata/neural_net_undersample_final_fit.Rdata")
 metrics <- neural_net_undersample_final_fit %>% collect_metrics()
 estimates = metrics[,".estimate"]
-neural_net_results <- data.frame(c(estimates[1,], estimates[2,], estimates[3,]))
-colnames(neural_net_results) <- c("accuracy", "f-score", "roc_auc")
+neural_net_results <- data.frame(c("Undersample", estimates[1,], estimates[2,], estimates[3,]))
+colnames(neural_net_results) <- c("Zbiór", "Dokładność", "f-score", "Pole pod krzywą ROC")
 
 load( "rdata/neural_net_undersample_selected_final_fit.Rdata")
 metrics <- neural_net_undersample_selected_final_fit %>% collect_metrics()
-add_metrics_to_results(metrics[,".estimate"], neural_net_results)
+neural_net_results <- add_metrics_to_results(metrics, neural_net_results, "Undersample z selekcją atrybutów")
 
 load("rdata/neural_net_oversample_final_fit.Rdata")
-metrics <- neural_net_oversample_selected_final_fit %>% collect_metrics()
-add_metrics_to_results(metrics[,".estimate"], neural_net_results)
+metrics <- neural_net_oversample_final_fit %>% collect_metrics()
+neural_net_results <- add_metrics_to_results(metrics, neural_net_results, "Oversample")
 
-load("data/neural_net_oversample_selected_final_fit.Rdata")
+load("rdata/neural_net_oversample_selected_final_fit.Rdata")
 metrics <- neural_net_oversample_selected_final_fit %>% collect_metrics() 
-add_metrics_to_results(metrics[,".estimate"], neural_net_results)
-#
+neural_net_results <- add_metrics_to_results(metrics, neural_net_results, "Oversample z selekcją atrybutów")
+
+neural_net_results
 ```
 
-
+W przypadku zbioru "oversample" uzyskano najlepsze spośród wszystkich modeli dokładność oraz f-score. Są one niezwykle bliskie wartości 1, zarówno w przypadku zbioru z selekcją atrybutów jak i bez. Natomiast, pole pod krzywą ROC ma najniższe do tej pory wartości w przypadku tych zbiorów. Lepiej pod tym względem wypadają zbiory poddane operacji undersample. 
+Jeśli chodzi o porównanie z pozostałymi modelami, sieć neuronowa radzi sobie z wykrywaniem oszustw najlepiej spośród wszystkich modeli, o ile wykorzystano zbiory "oversample" oraz próg odcięcia 0.5. Natomiast, krzywa ROC jest najmniej korzystna spośród wszystkich modeli.
   
 # Podsumowanie

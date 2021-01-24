@@ -2,10 +2,10 @@ checkNans <- function(data) {
   nans <- sum(is.na(data))
   
   if (nans > 0) {
-    sprintf("Zbiór danych ma %d wartości NaN", nans)
+    sprintf("Zbior danych ma %d wartosci NaN", nans)
     # TODO eliminate NaNs in this case
   } else {
-    print("Zbiór nie ma wartości NaN")
+    print("W zbiorze nie znajduja sie wartosci NaN")
   }
 }
 
@@ -39,7 +39,8 @@ create_tree_tune_spec <- function () {
 }
 create_neural_net_spec <- function (epochs=20) {
   return(mlp(epochs = epochs, 
-               hidden_units = 64)%>%
+               hidden_units = 64,
+              activation = "relu")%>%
              set_mode("classification") %>% 
              set_engine("keras", verbose = 1)
          # uses Adam optimizer by default
@@ -86,6 +87,8 @@ fit_and_eval <- function(workflow, data_split) {
   return(final_fit)
 }
 
-add_metrics_to_results <- function(metrics, data_frame) {
-  return(data_frame[nrow(data_frame) + 1,] <- c("accuracy" = metrics[1,], "f-score" = metrics[2,], "roc_auc" = metrics[3,]))
+add_metrics_to_results <- function(metrics, data_frame, dataset_type) {
+  new_row <- data.frame(dataset_type, metrics[1,".estimate"], metrics[2,".estimate"], metrics[3,".estimate"])
+  names(new_row) <- names(data_frame)
+  return(rbind(data_frame, new_row))
 }

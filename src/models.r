@@ -17,6 +17,7 @@ pacman::p_load(dplyr,
                e1071,
                randomForest,
                ranger)
+install_keras()
 def_par = par(no.readonly = TRUE)
 #data loading
 if (!grepl('src$', getwd())) {
@@ -43,7 +44,6 @@ trControl = trainControl(method="cv", number = 5, allowParallel = TRUE, verbose 
 rf_fit <- train(Class ~ ., data = data_df, method = "ranger", num.trees = 50, trControl = trControl, importance = 'impurity')
 
 save(rf_fit, file = "rdata/rf_fit.Rdata")
-
 imp <- varImp(rf_fit, scale = FALSE)
 imp <- data.frame(imp[1])
 rownames(imp)[imp$Overall > mean(imp$Overall)]
@@ -74,8 +74,8 @@ selected_data_test <- testing(selected_data_split)
 
 log_reg_tune_spec <- create_log_tune_spec()
 tree_tune_spec <- create_tree_tune_spec()
-undersample_neural_net_spec <- create_neural_net_spec(epochs = 300)
-oversample_neural_net_spec <- create_neural_net_spec(epochs = 50)
+undersample_neural_net_spec <- create_neural_net_spec(epochs = 400)
+oversample_neural_net_spec <- create_neural_net_spec(epochs = 100)
 
 # LOGISTIC REGRESSION
 # training and testing on dataset with all features and using undersample
@@ -104,7 +104,7 @@ log_reg_oversample_selected_workflow <- tune_with_data(log_reg_tune_spec, select
 log_req_oversample_selected_final_fit <- fit_and_eval(log_reg_oversample_selected_workflow, selected_data_split)
 log_req_oversample_selected_final_fit %>% collect_metrics()
 
-save(log_req_oversample_selected_final_fit, file = "data/log_req_oversample_selected_final_fit.Rdata")
+save(log_req_oversample_selected_final_fit, file = "rdata/log_req_oversample_selected_final_fit.Rdata")
 
 
 # DECISION TREE
