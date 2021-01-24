@@ -16,4 +16,11 @@ Klasyfikacja (K). Konkretyzacja tego zadania wymaga:
 
 Wybierając zbiór danych do tego zadania należy się upewnić, że występuje w nim co najmniej jeden atrybut dyskretny, który mógłby pełnić rolę interesującego pojęcia docelowego.
 
-### Link do docsa z naszymi przemyśleniami: [ZUM ZUM](https://docs.google.com/document/d/1pXVNTq8Kli4zFLp1t7dWfQHW-vCa7gz8rbN-M0bYmv8/edit)
+## Uruchamianie skryptów oraz generowanie wynikowaego pliku html.
+
+Obliczenia wykonywane na modelach znajdują się w pliku models.r. Skrypty tam zawarte po wykonaniu istotnych obliczeń zapisują je w odpowiednich plikach o rozszerzeniu .Rdata. 
+Należy uruchomić cały skrypt models.r przed wygenerowaniem pliku html.
+
+Plik html można wygenerować z pliku notebook.rmd. Poza analizą danych, odczytuje on zapisane dane z plików .Rdata i podsumowuje wyniki.
+
+Plik common.r zawiera funkcje pomocnicze dla obu pozostałych plików.
