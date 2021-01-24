@@ -1,3 +1,6 @@
+# Plik wykonujący czasochłonne obliczenia i zapisujący wyniki do plików .Rdata, które następnie są wykorzystywane 
+# przy generowaniu wynikowego pliku html.
+
 Sys.setlocale(category = "LC_ALL", locale = "Polish")
 install.packages("pacman")
 library(pacman)
@@ -19,20 +22,23 @@ pacman::p_load(dplyr,
                ranger)
 install_keras()
 def_par = par(no.readonly = TRUE)
-#data loading
 if (!grepl('src$', getwd())) {
   setwd("src")
 }
 source("common.r")
+# ładowanie danych - korzystamy z wczytanej wcześniej csv-ki i zapisanej w .Rdata - szybszy odczyt i mniejsza objętość pliku.
 load("rdata/datadf.Rdata")
 
+# Skalowanie atrybutów Amount oraz Time
 data_df <- data_df %>% mutate_at(c("Amount", "Time"), ~ (scale(.) %>% as.vector()))
 
+# Undersampling
 undersample_recipe <- recipe(Class~., data = data_df) %>%
   themis::step_downsample(Class)
 
 undersampled_df <-undersample_recipe %>% prep(training = data_df) %>% bake(new_data=NULL)
 
+#Oversampling
 oversample_recipe <- recipe(Class~., data = data_df) %>%
   themis::step_smote(Class)
 
@@ -63,7 +69,7 @@ selected_oversample_recipe <- recipe(Class~., data = data_df_selected) %>%
 
 selected_oversampled_df <- bake(selected_oversample_recipe, new_data=NULL)
 
-# splitting data into train and test sets
+# Podział danych na zbiór treningowy i testowy
 data_split <- initial_split(data_df, strata = Class)
 data_train <- training(data_split)
 data_test <- testing(data_split)
@@ -72,34 +78,35 @@ selected_data_split <- initial_split(data_df_selected, strata = Class)
 selected_data_train <- training(selected_data_split)
 selected_data_test <- testing(selected_data_split)
 
+# tworzenie specyfikacji modeli
 log_reg_tune_spec <- create_log_tune_spec()
 tree_tune_spec <- create_tree_tune_spec()
 undersample_neural_net_spec <- create_neural_net_spec(epochs = 400)
 oversample_neural_net_spec <- create_neural_net_spec(epochs = 100)
 
 # LOGISTIC REGRESSION
-# training and testing on dataset with all features and using undersample
+# Trening i testowanie na zbiorze poddanym podpróbkowaniu
 log_reg_undersample_workflow <- tune_with_data(log_reg_tune_spec, data_train, undersample_recipe)
 log_req_undersample_final_fit <- fit_and_eval(log_reg_undersample_workflow, data_split)
 log_req_undersample_final_fit %>% collect_metrics()
 
 save(log_req_undersample_final_fit, file = "rdata/log_req_undersample_final_fit.Rdata")
 
-# training and testing on dataset with selected features and using undersample
+# Trening i testowanie na zbiorze poddanym podpróbkowaniu oraz zawierającym wybrane atrybuty
 log_reg_undersample_selected_workflow <- tune_with_data(log_reg_tune_spec, selected_data_train, selected_undersample_recipe)
 log_req_undersample_selected_final_fit <- fit_and_eval(log_reg_undersample_selected_workflow, selected_data_split)
 log_req_undersample_selected_final_fit %>% collect_metrics()
 
 save(log_req_undersample_selected_final_fit, file = "rdata/log_req_undersample_selected_final_fit.Rdata")
 
-# training and testing on dataset with all features and using oversample
+# Trening i testowanie na zbiorze poddanym nadpróbkowaniu
 log_reg_oversample_workflow <- tune_with_data(log_reg_tune_spec, data_train, oversample_recipe)
 log_req_oversample_final_fit <- fit_and_eval(log_reg_oversample_workflow, data_split)
 log_req_oversample_final_fit %>% collect_metrics()
 
 save(log_req_oversample_final_fit, file = "rdata/log_req_oversample_final_fit.Rdata")
 
-# r training and testing on dataset with selected features and using oversample
+# Trening i testowanie na zbiorze poddanym nadpróbkowaniu oraz zawierającym wybrane atrybuty
 log_reg_oversample_selected_workflow <- tune_with_data(log_reg_tune_spec, selected_data_train, selected_oversample_recipe)
 log_req_oversample_selected_final_fit <- fit_and_eval(log_reg_oversample_selected_workflow, selected_data_split)
 log_req_oversample_selected_final_fit %>% collect_metrics()

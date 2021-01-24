@@ -1,3 +1,7 @@
+# Plik zawiera specyfikacje funkcji używanych zarówno w pliku models.r oraz notebook.Rmd,
+# a także funkcje, które pozwalają skrócić i uporządkować kod we wspomnianych plikach.
+
+# Sprawdź, czy zbiór danych zawiera wartosci NaN
 checkNans <- function(data) {
   nans <- sum(is.na(data))
   
@@ -9,6 +13,8 @@ checkNans <- function(data) {
   }
 }
 
+# Funkcja tworzy i zwraca macierz korelacji dla danego zbioru danych. Funkcja oczekuje, że w zbiorze będzie atrybut Class, jest więc 
+# podporządkowana pod nasze zadanie 
 corMatrix <- function (data, title) {
   data$Class <- as.numeric(data$Class) - 1
   cor_matrix <- cor(data)
@@ -22,12 +28,15 @@ corMatrix <- function (data, title) {
   return(cor_matrix)
 }
 
+# Funkcja pomocnicza do tworzenia specyfikacji modelu regresji logistycznej, która następnie zostanie użyta w
+# strojeniu i trenowaniu modelu.
 create_log_tune_spec <- function () {
   return(logistic_reg(penalty = tune(), mixture = 1) %>%
           set_engine("glmnet") %>%
           set_mode("classification"))
 }
 
+# Funkcja pomocnicza do tworzenia specyfikacji modelu drzewa klasyfikacji. 
 create_tree_tune_spec <- function () {
   return(decision_tree(
           cost_complexity = tune(),
@@ -38,6 +47,8 @@ create_tree_tune_spec <- function () {
           set_mode("classification")
         )
 }
+
+#Funkcja pomocnicza do tworzenia specyfikacji sieci neuronowej. Tworzy dwuwarstwowy perceptron z 64 neuronami.
 create_neural_net_spec <- function (epochs=20) {
   return(mlp(epochs = epochs, 
                hidden_units = 64,
@@ -48,6 +59,7 @@ create_neural_net_spec <- function (epochs=20) {
          )
 }
 
+# Wykonuje strojenie modeli i zwraca workflow zawierający model z najlepszymi hiperparametrami.
 tune_with_data <- function (tune_spec, data, recipe, kfolds = 10) {
   folds <- vfold_cv(data, v=kfolds, strata = Class)  
   
@@ -74,10 +86,13 @@ tune_with_data <- function (tune_spec, data, recipe, kfolds = 10) {
   return(final_workflow)
 }
 
+# Funkcja wykonująca trenowanie modelu zawartego w podanym workflow na zbiorze podzielonym na zbiór treningowy i testowy,
+# zgodnie z parametrem data_split.
 fit_and_eval <- function(workflow, data_split) {
   return(last_fit(workflow, split = data_split, metrics = metric_set(roc_auc, accuracy, f_meas)))
 }
 
+# Funkcja pomocnicza dodająca do ramki danych z wynikami uczenia modeli kolejny wynik.
 add_metrics_to_results <- function(metrics, data_frame, dataset_type) {
   new_row <- data.frame(dataset_type, metrics[1,".estimate"], metrics[2,".estimate"], metrics[3,".estimate"])
   names(new_row) <- names(data_frame)

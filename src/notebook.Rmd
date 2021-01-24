@@ -312,7 +312,6 @@ metrics <- tree_oversample_selected_final_fit %>% collect_metrics()
 tree_results <- add_metrics_to_results(metrics, tree_results, "Oversampling z selekcją atrybutów")
 
 tree_results
-#
 ```
 
 W przypadku drzewa wyraźnie widać poprawę działania w przypadku zbiorów poddanych *oversampling* w stosunku do modeli, które przetwarzały zbiory poddane działaniu *undersampling*. Wskazują na to dokładność oraz f-score. Jednakże, różnice zanikają w przypadku pola pod krzywą ROC. Oznacza to, że model odpowiadający zbiorowi z nadpróbkowaniem wykrywa oszustwa skuteczniej, lecz tylko dla określonego progu użytego do obliczenia dokładności i *f-score* (0.5). Dla innych progów odcięcia jakość modeli w obydwu przypadkach może być bardziej zbliżona. Warto także zaznaczyć, że dla każdego rodzaju zbioru, wartości zarówno pola pod krzywą ROC jak i pozostałych miar są niższe niż dla modelu regresji logistycznej, co czyni regresję logistyczną względnie lepszym modelem.
